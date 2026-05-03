@@ -531,6 +531,13 @@ fbRef.on("value", (snap) => {
 
   // ── Primera vez: sin datos en Firebase ──────────────────────────────────
   if (!data) {
+    // SEGURIDAD: solo inicializar si nunca hubo datos (pedir confirmación si ya cargó antes)
+    if (_fbLoaded) {
+      // Firebase devolvió null después de haber cargado — NO pisar datos, puede ser error temporal
+      console.warn("Firebase devolvió null después de cargar — ignorando");
+      return;
+    }
+    // Verdadera primera vez: inicializar rubros por defecto
     initDefaults();
     save();
     hideLoading();
