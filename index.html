@@ -795,7 +795,9 @@ function confirmSel() {
   selSelected.forEach(pid=>{
     const p=DB.productos.find(x=>x.id===pid);
     const min=getMin(p,null);
-    prov.productos.push({productoId:pid,stock:0,apedir:min,minimoManual:0});
+    const stock = p.lastStock ?? 0;           // usa el stock del último Excel importado
+    const apedir = Math.max(0, min - stock);
+    prov.productos.push({productoId:pid,stock,apedir,minimoManual:0});
   });
   save(); closeModal("m-sel"); renderDetail();
 }
@@ -838,10 +840,10 @@ function renderWA() {
 function buildWAText() {
   const prov = DB.proveedores.find(p=>p.id===currentProvId);
   const date = new Date().toLocaleDateString("es-AR");
-  let txt = `🛒 *Pedido para ${prov?.nombre}*\n📅 ${date}\n`;
+  let txt = `🛒 *Pedido - ${prov?.nombre}*\n📅 ${date}\n\n`;
   const grupos={}; waItems.filter(x=>x.qty>0).forEach(it=>{ if(!grupos[it.urg]) grupos[it.urg]=[]; grupos[it.urg].push(it); });
   const order=["SIN STOCK","CRÍTICO","BAJO","OK"];
-  order.filter(u=>grupos[u]).forEach(u=>{ txt+=`\n*${u}:*\n`; grupos[u].forEach(it=>{ txt+=`• ${it.nombre}: *${it.qty}*\n`; }); });
+  order.filter(u=>grupos[u]).forEach(u=>{ grupos[u].forEach(it=>{ txt+=`${it.qty}. ${it.nombre}\n`; }); });
   return txt.trim();
 }
 
@@ -975,12 +977,21 @@ function confirmImport() {
   });
 
   if(importTarget==="db"){
-    // Agregar a la base de datos (evitar duplicados por nombre exacto)
-    const existNames=new Set(DB.productos.map(p=>p.nombre.toLowerCase()));
+    // Agregar/actualizar la base de datos guardando el stock del Excel
     items.forEach(it=>{
-      if(existNames.has(it.nombre.toLowerCase())) return;
       const rub=DB.rubros.find(r=>r.nombre.toLowerCase()===it.rubroNombre.toLowerCase());
-      DB.productos.push({id:uid(),nombre:it.nombre,rubroId:rub?.id||"",minimoManual:0});
+      const existing=DB.productos.find(p=>p.nombre.toLowerCase()===it.nombre.toLowerCase());
+      if(existing){
+        if(rub) existing.rubroId=rub.id;
+        existing.lastStock=it.stock;
+        // Sincronizar stock en todos los proveedores que tengan este producto
+        DB.proveedores.forEach(pv=>{
+          const pp=pv.productos.find(x=>x.productoId===existing.id);
+          if(pp){ pp.stock=it.stock; pp.apedir=Math.max(0,getMin(existing,pp)-it.stock); }
+        });
+      } else {
+        DB.productos.push({id:uid(),nombre:it.nombre,rubroId:rub?.id||"",minimoManual:0,lastStock:it.stock});
+      }
     });
   } else {
     // Importar al proveedor
