@@ -419,35 +419,64 @@ const save = () => {
   _mySaveId = sid;
   DB._sid = sid;
   const data = JSON.parse(JSON.stringify(DB));
+  _localOpInProgress = true;
   fbRef.set(data).catch(err => {
     console.error("Firebase save error:", err);
+    _localOpInProgress = false;
     showToast("❌ Error al guardar. Revisá la conexión.");
   });
 };
 
+// ── FLAG: operación local en curso ──────────────────────────────────────────
+let _localOpInProgress = false;  // true mientras save() no recibió el eco de Firebase
+let _remoteUpdatePending = false; // hay cambios remotos pendientes de aplicar
+
 // Listener en tiempo real
 fbRef.on("value", (snap) => {
   const data = snap.val();
+
+  // ── Primera vez: sin datos en Firebase ──────────────────────────────────
   if (!data) {
-    // Primera vez: inicializar con rubros por defecto
     initDefaults();
     save();
     hideLoading();
     return;
   }
-  // Si el cambio lo hice yo, solo actualizo DB silenciosamente sin re-render
+
+  // ── Eco de mi propio save ────────────────────────────────────────────────
   if (data._sid && data._sid === _mySaveId) {
-    DB = data; ensureArrays();
+    _localOpInProgress = false;
+    DB = data; normalizeDB();
     if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); }
+    // Si había un update remoto pendiente, aplicarlo ahora
+    if (_remoteUpdatePending) { _remoteUpdatePending = false; renderCurrentView(); }
     return;
   }
-  // Cambio de otro usuario
-  DB = data; ensureArrays();
+
+  // ── Cambio de otro dispositivo ───────────────────────────────────────────
+  DB = data; normalizeDB();
   if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); return; }
-  // Solo re-renderizar si no hay un modal abierto (para no interrumpir al usuario)
-  const modalOpen = document.querySelector(".ov.open, .conf-ov.open");
-  if (!modalOpen) renderCurrentView();
-  showToast("🔄 Datos actualizados por otro usuario");
+
+  // No interrumpir si hay una operación local en curso, modal abierto o input enfocado
+  const modalOpen  = document.querySelector(".ov.open, .conf-ov.open");
+  const inputFocus = ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
+
+  if (_localOpInProgress || modalOpen || inputFocus) {
+    _remoteUpdatePending = true;
+    showToast("🔄 Cambios de otro dispositivo — se aplicarán al terminar");
+    return;
+  }
+
+  renderCurrentView();
+  showToast("🔄 Datos actualizados");
+});
+
+// Cuando el usuario cierra un modal, aplicar updates pendientes
+document.addEventListener("click", (e) => {
+  if (_remoteUpdatePending && !document.querySelector(".ov.open, .conf-ov.open")) {
+    _remoteUpdatePending = false;
+    setTimeout(renderCurrentView, 100);
+  }
 });
 
 function renderCurrentView() {
@@ -822,7 +851,7 @@ function saveStkEdit() {
   // Recalculate apedir
   const p = DB.productos.find(x=>x.id===prodId);
   const m = getMin(p,pp);
-  pp.apedir = Math.max(0, m - Number(pp.stock||0));
+  pp.apedir = Math.round(Math.max(0, m - Number(pp.stock||0)));
   save(); closeModal("m-stk"); renderDetail();
 }
 
@@ -832,7 +861,7 @@ function updateStock(prodId, val) {
   const p    = DB.productos.find(x=>x.id===prodId);
   if (!pp) return;
   pp.stock  = val===""?0:Math.max(0,Number(val));
-  pp.apedir = Math.max(0,getMin(p,pp)-pp.stock);
+  pp.apedir = Math.round(Math.max(0,getMin(p,pp)-pp.stock));
   save(); renderDetail();
 }
 
@@ -906,7 +935,7 @@ function confirmSel() {
     if (!p) return;
     const min=getMin(p,null);
     const stock = p.lastStock ?? 0;
-    const apedir = Math.max(0, min - stock);
+    const apedir = Math.round(Math.max(0, min - stock));
     prov.productos.push({productoId:pid,stock,apedir,minimoManual:0});
   });
   save(); closeModal("m-sel"); renderDetail();
@@ -951,9 +980,8 @@ function buildWAText() {
   const prov = DB.proveedores.find(p=>p.id===currentProvId);
   const date = new Date().toLocaleDateString("es-AR");
   let txt = `🛒 *Pedido - ${prov?.nombre}*\n📅 ${date}\n\n`;
-  const grupos={}; waItems.filter(x=>x.qty>0).forEach(it=>{ if(!grupos[it.urg]) grupos[it.urg]=[]; grupos[it.urg].push(it); });
-  const order=["SIN STOCK","CRÍTICO","BAJO","OK"];
-  order.filter(u=>grupos[u]).forEach(u=>{ grupos[u].forEach(it=>{ txt+=`${it.qty}. ${it.nombre}\n`; }); });
+  // Lista simple ordenada por urgencia, sin encabezados de nivel
+  waItems.filter(x=>x.qty>0).forEach(it=>{ txt+=`${Math.round(it.qty)}. ${it.nombre}\n`; });
   return txt.trim();
 }
 
@@ -1097,7 +1125,7 @@ function confirmImport() {
         // Sincronizar stock en todos los proveedores que tengan este producto
         DB.proveedores.forEach(pv=>{
           const pp=pv.productos.find(x=>x.productoId===existing.id);
-          if(pp){ pp.stock=it.stock; pp.apedir=Math.max(0,getMin(existing,pp)-it.stock); }
+          if(pp){ pp.stock=it.stock; pp.apedir=Math.round(Math.max(0,getMin(existing,pp)-it.stock)); }
         });
       } else {
         DB.productos.push({id:uid(),nombre:it.nombre,rubroId:rub?.id||"",minimoManual:0,lastStock:it.stock});
@@ -1120,12 +1148,12 @@ function confirmImport() {
       }
       if(!inProv.has(prod.id)){
         const min=getMin(prod,null);
-        prov.productos.push({productoId:prod.id,stock:it.stock,apedir:Math.max(0,min-it.stock),minimoManual:0});
+        prov.productos.push({productoId:prod.id,stock:it.stock,apedir:Math.round(Math.max(0,min-it.stock)),minimoManual:0});
         inProv.add(prod.id);
       } else {
         // actualizar stock
         const pp=prov.productos.find(x=>x.productoId===prod.id);
-        if(pp){ pp.stock=it.stock; pp.apedir=Math.max(0,getMin(prod,pp)-it.stock); }
+        if(pp){ pp.stock=it.stock; pp.apedir=Math.round(Math.max(0,getMin(prod,pp)-it.stock)); }
       }
     });
   }
