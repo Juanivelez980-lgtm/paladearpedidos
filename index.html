@@ -173,12 +173,13 @@ td{padding:10px 14px;vertical-align:middle}
 
 <!-- Loading screen -->
 <div id="loading-screen">
-  <div style="font-size:44px;margin-bottom:16px">🚚</div>
-  <div style="font-weight:800;font-size:24px;margin-bottom:8px">Gestión de Pedidos</div>
-  <div style="font-size:14px;opacity:0.7;margin-bottom:28px">Conectando con la base de datos...</div>
-  <div style="width:48px;height:4px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden">
-    <div style="width:100%;height:100%;background:#fff;border-radius:2px;animation:loading-bar 1.2s ease-in-out infinite"></div>
+  <div style="font-size:52px;margin-bottom:18px">🚚</div>
+  <div style="font-weight:800;font-size:26px;margin-bottom:6px;letter-spacing:-.5px">Gestión de Pedidos</div>
+  <div style="font-size:14px;opacity:0.65;margin-bottom:30px">Conectando con la base de datos...</div>
+  <div style="width:200px;height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden">
+    <div style="width:40%;height:100%;background:#fff;border-radius:2px;animation:loading-bar 1.4s ease-in-out infinite"></div>
   </div>
+  <div style="margin-top:40px;font-size:12px;opacity:.45">Si tarda más de 10 segundos, revisá las reglas de Firebase</div>
 </div>
 
 <div class="layout">
@@ -501,8 +502,31 @@ const save = () => {
 let _localOpInProgress = false;  // true mientras save() no recibió el eco de Firebase
 let _remoteUpdatePending = false; // hay cambios remotos pendientes de aplicar
 
-// Listener en tiempo real
+// ── Timeout de rescate: si Firebase no responde en 12s, mostrar error ────────
+const _loadTimeout = setTimeout(() => {
+  if (!_fbLoaded) {
+    const ls = document.getElementById("loading-screen");
+    if (ls) ls.innerHTML = `
+      <div style="font-size:44px;margin-bottom:16px">⚠️</div>
+      <div style="font-weight:800;font-size:20px;margin-bottom:10px">No se pudo conectar</div>
+      <div style="font-size:14px;opacity:.8;margin-bottom:6px;text-align:center;max-width:320px">
+        Posibles causas:<br>
+        • Las reglas de Firebase no permiten acceso<br>
+        • Sin conexión a internet<br>
+        • El proyecto Firebase fue pausado
+      </div>
+      <div style="font-size:13px;color:#C4B5FD;margin-bottom:24px;text-align:center;max-width:320px">
+        En Firebase Console → Realtime Database → Reglas,<br>asegurate de que estén en modo lectura/escritura libre.
+      </div>
+      <button onclick="location.reload()" style="background:#6366F1;color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+        🔄 Reintentar
+      </button>`;
+  }
+}, 12000);
+
+// ── Listener en tiempo real ───────────────────────────────────────────────────
 fbRef.on("value", (snap) => {
+  clearTimeout(_loadTimeout);
   const data = snap.val();
 
   // ── Primera vez: sin datos en Firebase ──────────────────────────────────
@@ -518,16 +542,14 @@ fbRef.on("value", (snap) => {
     _localOpInProgress = false;
     DB = data; normalizeDB();
     if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); }
-    // Si había un update remoto pendiente, aplicarlo ahora
     if (_remoteUpdatePending) { _remoteUpdatePending = false; renderCurrentView(); }
     return;
   }
 
-  // ── Cambio de otro dispositivo ───────────────────────────────────────────
+  // ── Datos recibidos ──────────────────────────────────────────────────────
   DB = data; normalizeDB();
   if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); return; }
 
-  // No interrumpir si hay una operación local en curso, modal abierto o input enfocado
   const modalOpen  = document.querySelector(".ov.open, .conf-ov.open");
   const inputFocus = ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);
 
@@ -539,6 +561,27 @@ fbRef.on("value", (snap) => {
 
   renderCurrentView();
   showToast("🔄 Datos actualizados");
+
+}, (error) => {
+  // ── Error de Firebase (permisos, red, etc.) ──────────────────────────────
+  clearTimeout(_loadTimeout);
+  console.error("Firebase error:", error);
+  const ls = document.getElementById("loading-screen");
+  if (ls) ls.innerHTML = `
+    <div style="font-size:44px;margin-bottom:16px">🔒</div>
+    <div style="font-weight:800;font-size:20px;margin-bottom:10px">Error de acceso</div>
+    <div style="font-size:14px;opacity:.8;margin-bottom:8px;text-align:center;max-width:340px">
+      <strong>${error.code||"Error"}</strong><br>${error.message||"No se pudo conectar con Firebase"}
+    </div>
+    <div style="font-size:13px;color:#FCA5A5;margin-bottom:8px;text-align:center;max-width:340px">
+      Solución: En Firebase Console → Realtime Database → Reglas, publicá esto:
+    </div>
+    <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px 16px;font-family:monospace;font-size:13px;color:#A5F3FC;margin-bottom:20px">
+      { "rules": { ".read": true, ".write": true } }
+    </div>
+    <button onclick="location.reload()" style="background:#6366F1;color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+      🔄 Reintentar
+    </button>`;
 });
 
 // Cuando el usuario cierra un modal, aplicar updates pendientes
@@ -567,7 +610,8 @@ function showLoading() {
   document.getElementById("loading-screen").style.display="flex";
 }
 function hideLoading() {
-  document.getElementById("loading-screen").style.display="none";
+  const el = document.getElementById("loading-screen");
+  if (el) el.style.display="none";
 }
 
 const uid = () => Math.random().toString(36).slice(2,9);
