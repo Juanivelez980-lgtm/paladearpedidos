@@ -396,6 +396,7 @@ function normalizeDB() {
       if (pp.minimoManual === undefined) pp.minimoManual = 0;
       if (pp.stock        === undefined) pp.stock        = 0;
       if (pp.apedir       === undefined) pp.apedir       = 0;
+      pp.apedir = Math.round(Number(pp.apedir)||0);
     });
   });
   DB.productos.forEach(p => {
@@ -773,7 +774,7 @@ function renderDetail() {
 
   // Total
   const total = (prov.productos||[]).reduce((acc,pp)=>acc+(Number(pp.apedir)||0),0);
-  document.getElementById("pd-total").textContent = total+" unid.";
+  document.getElementById("pd-total").textContent = Math.round(total)+" unid.";
 
   let items = (prov.productos||[]).filter(pp=>{
     const p=DB.productos.find(x=>x.id===pp.productoId);
@@ -815,8 +816,8 @@ function renderDetail() {
           </div>
         </div>
         <div class="stk-inputs">
-          <div class="stk-f"><div class="stk-lbl" style="color:#9CA3AF">Stock actual</div><input type="number" class="stk-inp" style="border:1.5px solid #E5E7EB;background:#FAFAFA;color:#111827" value="${pp.stock}" min="0" onchange="updateStock('${pp.productoId}',this.value)"></div>
-          <div class="stk-f"><div class="stk-lbl" style="color:#6366F1">A pedir</div><input type="number" class="stk-inp" style="border:2px solid #6366F1;background:#EEF2FF;color:#4F46E5" value="${pp.apedir||0}" min="0" onchange="updateApedir('${pp.productoId}',this.value)"></div>
+          <div class="stk-f"><div class="stk-lbl" style="color:#9CA3AF">Stock actual</div><input type="number" class="stk-inp" style="border:1.5px solid #E5E7EB;background:#FAFAFA;color:#111827" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)"></div>
+          <div class="stk-f"><div class="stk-lbl" style="color:#6366F1">A pedir</div><input type="number" class="stk-inp" style="border:2px solid #6366F1;background:#EEF2FF;color:#4F46E5" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)"></div>
         </div>
       </div>
     </div>`;
@@ -869,10 +870,10 @@ function updateApedir(prodId, val) {
   const prov = DB.proveedores.find(p=>p.id===currentProvId);
   const pp   = prov?.productos.find(x=>x.productoId===prodId);
   if (!pp) return;
-  pp.apedir = val===""?0:Math.max(0,Number(val));
+  pp.apedir = val===""?0:Math.round(Math.max(0,Number(val)));
   save();
   const total = (prov.productos||[]).reduce((acc,x)=>acc+(Number(x.apedir)||0),0);
-  document.getElementById("pd-total").textContent = total+" unid.";
+  document.getElementById("pd-total").textContent = Math.round(total)+" unid.";
 }
 
 function delProdFromProv(prodId) {
@@ -944,36 +945,93 @@ function confirmSel() {
 // ══ WHATSAPP ══════════════════════════════════════════════════════════════════
 let waItems = [];
 
+let waFiltroUrg = ["SIN STOCK","CRÍTICO","BAJO","OK"]; // niveles incluidos
+let waFiltroMin = 1; // cantidad mínima a pedir para incluir
+
+function buildWaItems(filtroUrg, filtroMin) {
+  const prov = DB.proveedores.find(p=>p.id===currentProvId);
+  return (prov?.productos||[])
+    .map(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); const min=getMin(p,pp); const qty=Math.round(Number(pp.apedir)||0); const urg=getUrg(pp.stock,min); return {productoId:pp.productoId,nombre:p?.nombre||"?",qty,urg,urgOrder:URG[urg]?.order??99}; })
+    .filter(it=>it.qty>=filtroMin && filtroUrg.includes(it.urg))
+    .sort((a,b)=>a.urgOrder-b.urgOrder||a.nombre.localeCompare(b.nombre));
+}
+
 function openWA() {
   const prov = DB.proveedores.find(p=>p.id===currentProvId);
-  // Traer solo los que tienen apedir > 0, ordenados por urgencia
-  waItems = (prov?.productos||[])
-    .filter(pp=>Number(pp.apedir)>0)
-    .map(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); const min=getMin(p,pp); return {productoId:pp.productoId,nombre:p?.nombre||"?",qty:Number(pp.apedir),urg:getUrg(pp.stock,min),urgOrder:URG[getUrg(pp.stock,min)]?.order??99}; })
-    .sort((a,b)=>a.urgOrder-b.urgOrder||a.nombre.localeCompare(b.nombre));
+  if (!prov) return;
+  // Mostrar pantalla de filtro primero
+  renderWAFiltro(); openModal("m-wa");
+}
 
-  if (!waItems.length) { alert("No hay productos con cantidades a pedir. Completá la columna 'A pedir' primero."); return; }
-  renderWA(); openModal("m-wa");
+function renderWAFiltro() {
+  const el = document.getElementById("wa-list");
+  const urgOpts = [
+    ["SIN STOCK","#FEE2E2","#991B1B"],
+    ["CRÍTICO",  "#FFEDD5","#9A3412"],
+    ["BAJO",     "#FEF9C3","#854D0E"],
+    ["OK",       "#DCFCE7","#166534"],
+  ];
+  el.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Incluir niveles de urgencia</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${urgOpts.map(([u,bg,color])=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:12px;background:${bg};cursor:pointer;font-size:13px;font-weight:600;color:${color}">
+            <input type="checkbox" value="${u}" ${waFiltroUrg.includes(u)?"checked":""} onchange="toggleWaUrg('${u}',this.checked)" style="accent-color:${color};width:16px;height:16px">
+            ${u}
+          </label>`).join("")}
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Cantidad mínima a incluir</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="number" id="wa-min-inp" value="${waFiltroMin}" min="0" style="width:80px;padding:9px 12px;border:2px solid #6366F1;border-radius:10px;font-size:16px;font-weight:700;color:#4F46E5;text-align:center;outline:none;background:#EEF2FF" onchange="waFiltroMin=Math.max(0,Number(this.value)||0)">
+        <span style="font-size:13px;color:#6B7280">unidades o más</span>
+      </div>
+    </div>
+    <div id="wa-preview-count" style="font-size:13px;color:#6366F1;font-weight:600;margin-bottom:12px"></div>
+    <button class="btn btn-p" style="width:100%;margin-bottom:0" onclick="aplicarFiltroWA()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      Ver lista y enviar
+    </button>`;
+  updateWAPreviewCount();
+}
+
+function toggleWaUrg(u, checked) {
+  if (checked) { if(!waFiltroUrg.includes(u)) waFiltroUrg.push(u); }
+  else waFiltroUrg = waFiltroUrg.filter(x=>x!==u);
+  updateWAPreviewCount();
+}
+
+function updateWAPreviewCount() {
+  const min = Number(document.getElementById("wa-min-inp")?.value)||0;
+  const count = buildWaItems(waFiltroUrg, min).length;
+  const el = document.getElementById("wa-preview-count");
+  if (el) el.textContent = count > 0 ? `${count} producto${count>1?"s":""} se incluirán en el pedido` : "⚠ Ningún producto coincide con el filtro";
+}
+
+function aplicarFiltroWA() {
+  waFiltroMin = Math.max(0, Number(document.getElementById("wa-min-inp")?.value)||0);
+  waItems = buildWaItems(waFiltroUrg, waFiltroMin);
+  if (!waItems.length) { showToast("⚠ Ningún producto con ese filtro"); return; }
+  renderWA();
 }
 
 function renderWA() {
   const el = document.getElementById("wa-list");
   if (!waItems.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">✅</div><div class="empty-t">Lista vacía</div></div>`; return; }
-  // Agrupar por urgencia
-  const grupos = {};
-  waItems.forEach(it=>{ if(!grupos[it.urg]) grupos[it.urg]=[]; grupos[it.urg].push(it); });
-  const order = ["SIN STOCK","CRÍTICO","BAJO","OK"];
-  el.innerHTML = order.filter(u=>grupos[u]).map(u=>{
-    const m=URG[u];
-    return `<div style="margin-bottom:4px">
-      <div style="font-size:11px;font-weight:700;color:${m.text};background:${m.bg};padding:4px 10px;border-radius:6px;margin-bottom:6px;display:inline-block">${u}</div>
-      ${grupos[u].map((it,i)=>`<div class="wa-item">
-        <div class="wa-name">${esc(it.nombre)}</div>
-        <input type="number" class="wa-qty" value="${it.qty}" min="0" onchange="waItems.find(x=>x.productoId==='${it.productoId}').qty=Number(this.value)">
-        <button class="wa-del" onclick="waItems=waItems.filter(x=>x.productoId!=='${it.productoId}');renderWA()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-      </div>`).join("")}
-    </div>`;
-  }).join("");
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="renderWAFiltro()" style="background:#F3F4F6;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;color:#6B7280;cursor:pointer;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>Cambiar filtro
+      </button>
+      <span style="font-size:12px;color:#9CA3AF">${waItems.length} producto${waItems.length>1?"s":""}</span>
+    </div>
+    ${waItems.map(it=>`<div class="wa-item">
+      <div class="wa-name">${esc(it.nombre)}</div>
+      <input type="number" class="wa-qty" value="${Math.round(it.qty)}" min="0" onchange="waItems.find(x=>x.productoId==='${it.productoId}').qty=Math.round(Math.max(0,Number(this.value)))">
+      <button class="wa-del" onclick="waItems=waItems.filter(x=>x.productoId!=='${it.productoId}');renderWA()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+    </div>`).join("")}`;
 }
 
 function buildWAText() {
