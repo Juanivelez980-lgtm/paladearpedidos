@@ -378,11 +378,35 @@ const fbRef = firebase.database().ref("pedidos");
 let _mySaveId = null;   // para ignorar mi propio eco de Firebase
 let _fbLoaded  = false;
 
-function ensureArrays() {
-  if (!DB.rubros)      DB.rubros      = [];
-  if (!DB.productos)   DB.productos   = [];
-  if (!DB.proveedores) DB.proveedores = [];
+// Firebase convierte arrays en objetos {0:{...},1:{...}} — hay que revertirlo
+function toArr(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.filter(x => x != null);
+  if (typeof val === "object") return Object.values(val).filter(x => x != null);
+  return [];
 }
+
+function normalizeDB() {
+  DB.rubros      = toArr(DB.rubros);
+  DB.productos   = toArr(DB.productos);
+  DB.proveedores = toArr(DB.proveedores);
+  DB.proveedores.forEach(prov => {
+    prov.productos = toArr(prov.productos);
+    prov.productos.forEach(pp => {
+      if (pp.minimoManual === undefined) pp.minimoManual = 0;
+      if (pp.stock        === undefined) pp.stock        = 0;
+      if (pp.apedir       === undefined) pp.apedir       = 0;
+    });
+  });
+  DB.productos.forEach(p => {
+    if (p.minimoManual === undefined) p.minimoManual = 0;
+    if (p.lastStock    === undefined) p.lastStock    = 0;
+    if (!p.rubroId) p.rubroId = "";
+  });
+}
+
+// Alias para compatibilidad con llamadas existentes
+const ensureArrays = normalizeDB;
 
 function initDefaults() {
   const defaults = [["Aceites y vinagres",10],["Aceitunas",6],["Azúcar y cacao",10],["Bebidas",6],["Cereales",6],["Deshidratados",15],["Dulces, miel y chocolates",10],["Encurtidos",6],["Especias",4],["Frutos secos",15],["Granos y legumbres",10],["Harinas",10],["Infusiones y hierbas",3],["Linea gourmet",6],["Mantecas",10],["Productos de frío",10],["Semillas",10],["Tomate triturado",10]];
@@ -390,10 +414,15 @@ function initDefaults() {
 }
 
 const save = () => {
+  normalizeDB();  // asegurar arrays antes de guardar
   const sid = Date.now()+"_"+Math.random().toString(36).slice(2,6);
   _mySaveId = sid;
   DB._sid = sid;
-  fbRef.set(JSON.parse(JSON.stringify(DB)));  // deep copy para evitar referencias
+  const data = JSON.parse(JSON.stringify(DB));
+  fbRef.set(data).catch(err => {
+    console.error("Firebase save error:", err);
+    showToast("❌ Error al guardar. Revisá la conexión.");
+  });
 };
 
 // Listener en tiempo real
@@ -540,7 +569,7 @@ function saveRub() {
   if (!nom) return;
   if (id) { const r=DB.rubros.find(x=>x.id===id); if(r){r.nombre=nom;r.minimo=min;} }
   else DB.rubros.push({id:uid(),nombre:nom,minimo:min});
-  save(); closeModal("m-rub"); renderRubros();
+  save(); closeModal("m-rub"); renderRubros(); renderDB();
 }
 
 function delRub(id) {
@@ -868,10 +897,15 @@ function toggleSel(id) {
 function confirmSel() {
   if (!selSelected.size) return;
   const prov = DB.proveedores.find(p=>p.id===currentProvId);
+  if (!prov) return;
+  if (!Array.isArray(prov.productos)) prov.productos = [];
   selSelected.forEach(pid=>{
+    // Evitar duplicados
+    if (prov.productos.find(x=>x.productoId===pid)) return;
     const p=DB.productos.find(x=>x.id===pid);
+    if (!p) return;
     const min=getMin(p,null);
-    const stock = p.lastStock ?? 0;           // usa el stock del último Excel importado
+    const stock = p.lastStock ?? 0;
     const apedir = Math.max(0, min - stock);
     prov.productos.push({productoId:pid,stock,apedir,minimoManual:0});
   });
