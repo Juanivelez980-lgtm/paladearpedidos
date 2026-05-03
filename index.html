@@ -600,9 +600,9 @@ document.addEventListener("click", (e) => {
 });
 
 function renderCurrentView() {
-  if (document.getElementById("page-prov-detail").classList.contains("active")) renderDetail();
-  else if (document.getElementById("page-productos").classList.contains("active")) renderDB();
-  else if (document.getElementById("page-rubros").classList.contains("active")) renderRubros();
+  if (document.getElementById("page-prov-detail")?.classList.contains("active")) renderDetail();
+  else if (document.getElementById("page-productos")?.classList.contains("active")) renderDB();
+  else if (document.getElementById("page-rubros")?.classList.contains("active")) renderRubros();
   else renderProvList();
 }
 
@@ -670,7 +670,8 @@ function goProvDetail(provId) {
   const prov = DB.proveedores.find(p=>p.id===provId);
   const idx  = DB.proveedores.indexOf(prov);
   const color = PCOLORS[idx%PCOLORS.length];
-  document.getElementById("pd-hdr").style.background = `linear-gradient(135deg,${color},${color}bb)`;
+  // pd-hdr not used in desktop — color set via pd-hdr-icon
+  // document.getElementById("pd-hdr").style.background = `linear-gradient(135deg,${color},${color}bb)`;
   document.getElementById("pd-title").textContent = prov.nombre;
   document.getElementById("pd-search").value = "";
   document.getElementById("pd-sort").value = "urgencia";
@@ -682,7 +683,7 @@ function goProvDetail(provId) {
 function goProvList() {
   currentProvId = null;
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.getElementById("page-proveedores").classList.add("active");
+  const pageP=document.getElementById("page-proveedores"); if(pageP) pageP.classList.add("active"); else document.getElementById("page-welcome")?.classList.add("active");
   renderProvList();
 }
 
@@ -813,8 +814,12 @@ function delProdDB(id) {
 // ══ PROVEEDORES ═══════════════════════════════════════════════════════════════
 function renderProvList() {
   const el  = document.getElementById("prov-list");
+  if (!el) return;
   const sub = document.getElementById("prov-sub");
-  sub.textContent = DB.proveedores.length===0 ? "Agregá tu primer proveedor" : `${DB.proveedores.length} proveedor${DB.proveedores.length>1?"es":""}`;
+  if (sub) sub.textContent = DB.proveedores.length===0 ? "Agregá tu primer proveedor" : `${DB.proveedores.length} proveedor${DB.proveedores.length>1?"es":""}`;
+  // Update sidebar section title count
+  const sbTitle = document.querySelector(".sb-section-title");
+  if (sbTitle && DB.proveedores.length>0) sbTitle.textContent = `Proveedores (${DB.proveedores.length})`;
   if (!DB.proveedores.length) { el.innerHTML=`<div style="padding:20px 16px;color:#9CA3AF;font-size:13px;text-align:center">Sin proveedores.<br>Hacé clic en Nuevo Proveedor.</div>`; return; }
   el.innerHTML = DB.proveedores.map((prov,i)=>{
     const color = PCOLORS[i%PCOLORS.length];
