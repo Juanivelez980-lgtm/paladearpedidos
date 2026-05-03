@@ -679,12 +679,47 @@ function normalizeDB() {
 const ensureArrays = normalizeDB;
 
 function initDefaults() {
+  // Antes de inicializar, verificar si hay un backup local con datos reales
+  const backup = getLocalBackup();
+  if (backup && backup.data) {
+    const bd = backup.data;
+    const hasProv = (bd.proveedores && (Array.isArray(bd.proveedores) ? bd.proveedores.length : Object.keys(bd.proveedores||{}).length) > 0);
+    const hasProd = (bd.productos && (Array.isArray(bd.productos) ? bd.productos.length : Object.keys(bd.productos||{}).length) > 0);
+    if (hasProv || hasProd) {
+      console.log("🔄 Firebase vacío pero hay backup local — restaurando...");
+      DB = backup.data;
+      normalizeDB();
+      save(); // Repush a Firebase
+      showToast("🔄 Datos restaurados desde backup local");
+      return;
+    }
+  }
+  // Primera vez real: cargar rubros por defecto
   const defaults = [["Aceites y vinagres",10],["Aceitunas",6],["Azúcar y cacao",10],["Bebidas",6],["Cereales",6],["Deshidratados",15],["Dulces, miel y chocolates",10],["Encurtidos",6],["Especias",4],["Frutos secos",15],["Granos y legumbres",10],["Harinas",10],["Infusiones y hierbas",3],["Linea gourmet",6],["Mantecas",10],["Productos de frío",10],["Semillas",10],["Tomate triturado",10]];
   DB.rubros = defaults.map(([n,m]) => ({id:uid(),nombre:n,minimo:m}));
 }
 
+const BACKUP_KEY = "pedidos_backup_v4";
+
+// Guarda una copia local como respaldo ante fallas de Firebase
+function saveLocalBackup() {
+  try {
+    const backup = {ts: Date.now(), data: JSON.parse(JSON.stringify(DB))};
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
+  } catch(e) { console.warn("Backup local no disponible:", e); }
+}
+
+function getLocalBackup() {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
 const save = () => {
   normalizeDB();  // asegurar arrays antes de guardar
+  saveLocalBackup();  // backup local SIEMPRE
   const sid = Date.now()+"_"+Math.random().toString(36).slice(2,6);
   _mySaveId = sid;
   DB._sid = sid;
@@ -693,7 +728,7 @@ const save = () => {
   fbRef.set(data).catch(err => {
     console.error("Firebase save error:", err);
     _localOpInProgress = false;
-    showToast("❌ Error al guardar. Revisá la conexión.");
+    showToast("❌ Error al guardar en la nube. Los datos están guardados localmente.");
   });
 };
 
@@ -754,7 +789,21 @@ fbRef.on("value", (snap) => {
   }
 
   // ── Datos recibidos ──────────────────────────────────────────────────────
+  // Verificar que Firebase no está devolviendo menos datos que el backup local
+  const backup = getLocalBackup();
+  if (backup && backup.data && !_fbLoaded) {
+    const fbProvs = Array.isArray(data.proveedores) ? data.proveedores.length : Object.keys(data.proveedores||{}).length;
+    const bkProvs = Array.isArray(backup.data.proveedores) ? backup.data.proveedores.length : Object.keys(backup.data.proveedores||{}).length;
+    if (bkProvs > fbProvs) {
+      console.warn(`⚠️ Firebase tiene ${fbProvs} proveedores pero backup local tiene ${bkProvs}. Usando backup.`);
+      DB = backup.data; normalizeDB(); save();
+      _fbLoaded = true; hideLoading(); renderCurrentView();
+      showToast("⚠️ Se detectó pérdida de datos — restaurado desde backup local");
+      return;
+    }
+  }
   DB = data; normalizeDB();
+  saveLocalBackup(); // siempre actualizar el backup cuando llegan datos de Firebase
   if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); return; }
 
   const modalOpen  = document.querySelector(".ov.open, .conf-ov.open");
