@@ -9,11 +9,14 @@
 <meta name="theme-color" content="#4F46E5">
 <title>Gestión de Pedidos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F3F4F6;color:#111827;max-width:520px;margin:0 auto;min-height:100dvh;overflow-x:hidden}
 button,input,select,textarea{font-family:inherit}
 input[type=number]::-webkit-inner-spin-button{opacity:1}
+@keyframes loading-bar{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 /* ── Layout ── */
 .app{display:flex;flex-direction:column;min-height:100dvh}
 .page{display:none;flex-direction:column;flex:1;padding-bottom:70px}
@@ -121,6 +124,16 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
 </head>
 <body>
 <div class="app">
+
+<!-- Loading screen -->
+<div id="loading-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff">
+  <div style="font-size:44px;margin-bottom:16px">🚚</div>
+  <div style="font-weight:800;font-size:22px;margin-bottom:8px">Pedidos</div>
+  <div style="font-size:14px;opacity:0.7;margin-bottom:24px">Conectando con la base de datos...</div>
+  <div style="width:40px;height:4px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden">
+    <div style="width:100%;height:100%;background:#fff;border-radius:2px;animation:loading-bar 1.2s ease-in-out infinite"></div>
+  </div>
+</div>
 
 <!-- ══ NAV ══════════════════════════════════════════════════════════════════ -->
 <nav class="bottom-nav">
@@ -349,22 +362,85 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
 // ══ DATA MODEL ════════════════════════════════════════════════════════════════
 let DB = { rubros:[], productos:[], proveedores:[] };
 
-const save = () => localStorage.setItem("pedidos_v4", JSON.stringify(DB));
-const load = () => {
-  try {
-    const d = localStorage.getItem("pedidos_v4");
-    if (d) DB = JSON.parse(d);
-    // Migrate: si vienen datos viejos sin rubros, cargar defaults
-    if (!DB.rubros) DB.rubros = [];
-    if (!DB.productos) DB.productos = [];
-    if (!DB.proveedores) DB.proveedores = [];
-  } catch {}
-  if (DB.rubros.length === 0) {
-    const defaults = [["Aceites y vinagres",10],["Aceitunas",6],["Azúcar y cacao",10],["Bebidas",6],["Cereales",6],["Deshidratados",15],["Dulces, miel y chocolates",10],["Encurtidos",6],["Especias",4],["Frutos secos",15],["Granos y legumbres",10],["Harinas",10],["Infusiones y hierbas",3],["Linea gourmet",6],["Mantecas",10],["Productos de frío",10],["Semillas",10],["Tomate triturado",10]];
-    DB.rubros = defaults.map(([n,m]) => ({id:uid(),nombre:n,minimo:m}));
-    save();
-  }
+// ══ FIREBASE ══════════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyC0HDffPhplf1dyMOzV9fTkt8l4JNbWV3o",
+  authDomain: "pedidos-proveedores-d8d8a.firebaseapp.com",
+  databaseURL: "https://pedidos-proveedores-d8d8a-default-rtdb.firebaseio.com",
+  projectId: "pedidos-proveedores-d8d8a",
+  storageBucket: "pedidos-proveedores-d8d8a.firebasestorage.app",
+  messagingSenderId: "326909224784",
+  appId: "1:326909224784:web:877cb5a06be412f59aee55"
 };
+firebase.initializeApp(firebaseConfig);
+const fbRef = firebase.database().ref("pedidos");
+
+let _mySaveId = null;   // para ignorar mi propio eco de Firebase
+let _fbLoaded  = false;
+
+function ensureArrays() {
+  if (!DB.rubros)      DB.rubros      = [];
+  if (!DB.productos)   DB.productos   = [];
+  if (!DB.proveedores) DB.proveedores = [];
+}
+
+function initDefaults() {
+  const defaults = [["Aceites y vinagres",10],["Aceitunas",6],["Azúcar y cacao",10],["Bebidas",6],["Cereales",6],["Deshidratados",15],["Dulces, miel y chocolates",10],["Encurtidos",6],["Especias",4],["Frutos secos",15],["Granos y legumbres",10],["Harinas",10],["Infusiones y hierbas",3],["Linea gourmet",6],["Mantecas",10],["Productos de frío",10],["Semillas",10],["Tomate triturado",10]];
+  DB.rubros = defaults.map(([n,m]) => ({id:uid(),nombre:n,minimo:m}));
+}
+
+const save = () => {
+  const sid = Date.now()+"_"+Math.random().toString(36).slice(2,6);
+  _mySaveId = sid;
+  DB._sid = sid;
+  fbRef.set(JSON.parse(JSON.stringify(DB)));  // deep copy para evitar referencias
+};
+
+// Listener en tiempo real
+fbRef.on("value", (snap) => {
+  const data = snap.val();
+  if (!data) {
+    // Primera vez: inicializar con rubros por defecto
+    initDefaults();
+    save();
+    hideLoading();
+    return;
+  }
+  // Si el cambio lo hice yo, solo actualizo DB silenciosamente sin re-render
+  if (data._sid && data._sid === _mySaveId) {
+    DB = data; ensureArrays();
+    if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); }
+    return;
+  }
+  // Cambio de otro usuario
+  DB = data; ensureArrays();
+  if (!_fbLoaded) { _fbLoaded = true; hideLoading(); renderCurrentView(); return; }
+  // Solo re-renderizar si no hay un modal abierto (para no interrumpir al usuario)
+  const modalOpen = document.querySelector(".ov.open, .conf-ov.open");
+  if (!modalOpen) renderCurrentView();
+  showToast("🔄 Datos actualizados por otro usuario");
+});
+
+function renderCurrentView() {
+  if (document.getElementById("page-prov-detail").classList.contains("active")) renderDetail();
+  else if (document.getElementById("page-productos").classList.contains("active")) renderDB();
+  else if (document.getElementById("page-rubros").classList.contains("active")) renderRubros();
+  else renderProvList();
+}
+
+function showToast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) { t=document.createElement("div"); t.id="toast"; t.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1F2937;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;white-space:nowrap"; document.body.appendChild(t); }
+  t.textContent=msg; t.style.opacity="1";
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.opacity="0",2500);
+}
+
+function showLoading() {
+  document.getElementById("loading-screen").style.display="flex";
+}
+function hideLoading() {
+  document.getElementById("loading-screen").style.display="none";
+}
 
 const uid = () => Math.random().toString(36).slice(2,9);
 const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -1035,10 +1111,8 @@ function showConfirm(title, msg, fn) {
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════════════════
-load();
-renderProvList();
-renderDB();
-renderRubros();
+showLoading();
+// Firebase listener already set up above — renderCurrentView() called when data arrives
 </script>
 </body>
 </html>
