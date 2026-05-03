@@ -877,16 +877,20 @@ function renderDetail() {
   const sortBy  = document.getElementById("pd-sort").value;
   const urgF    = window._urgFilter||"";
 
-  // Chips
+  // Chips — desktop pill style
   const urgCnt={};
   (prov.productos||[]).forEach(pp=>{
     const p=DB.productos.find(x=>x.id===pp.productoId);
     const u=getUrg(pp.stock,getMin(p,pp));
     if(u) urgCnt[u]=(urgCnt[u]||0)+1;
   });
-  document.getElementById("pd-chips").innerHTML = Object.entries(urgCnt).map(([u,c])=>{
-    const m=URG[u],sel=urgF===u;
-    return `<button class="chip" onclick="toggleUrgF('${u}')" style="background:${sel?"#fff":"rgba(255,255,255,.18)"};color:${sel?m.text:"#fff"}">${u} (${c})</button>`;
+  const chipsEl = document.getElementById("pd-chips");
+  if (chipsEl) chipsEl.innerHTML = Object.entries(urgCnt).sort((a,b)=>(URG[a[0]]?.order??9)-(URG[b[0]]?.order??9)).map(([u,c])=>{
+    const m=URG[u], active=urgF===u;
+    return `<button class="stat-chip" onclick="toggleUrgF('${u}')"
+      style="background:${active?m.dot:m.bg};color:${active?"#fff":m.text};border:none;cursor:pointer;transition:all .15s">
+      <span style="width:7px;height:7px;border-radius:50%;background:${active?"#fff":m.dot};display:inline-block;flex-shrink:0"></span>
+      ${u} <strong>${c}</strong></button>`;
   }).join("");
 
   // Total
@@ -1393,24 +1397,6 @@ function goProvList() {
   document.getElementById("page-welcome").classList.add("active");
   document.getElementById("topbar-breadcrumb").textContent = "";
   renderProvList();
-}
-
-// Patch renderDetail chips for desktop (pill buttons)
-const _origRenderDetail = renderDetail;
-function renderDetail() {
-  _origRenderDetail();
-  // Fix chip row to use desktop pill style
-  const prov = DB.proveedores.find(p=>p.id===currentProvId);
-  if (!prov) return;
-  const urgCnt={};
-  (prov.productos||[]).forEach(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); const u=getUrg(pp.stock,getMin(p,pp)); if(u) urgCnt[u]=(urgCnt[u]||0)+1; });
-  document.getElementById("pd-chips").innerHTML = Object.entries(urgCnt).map(([u,c])=>{
-    const m=URG[u], sel=(window._urgFilter||""===u);
-    return `<button class="stat-chip" onclick="toggleUrgF('${u}')"
-      style="background:${(window._urgFilter||"")==u?m.dot:m.bg};color:${(window._urgFilter||"")==u?"#fff":m.text}">
-      <span style="width:7px;height:7px;border-radius:50%;background:${m.dot};display:inline-block"></span>
-      ${u} <strong>${c}</strong></button>`;
-  }).join("");
 }
 
 // Sync indicator
