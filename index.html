@@ -2,363 +2,432 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pedidos">
-<meta name="theme-color" content="#4F46E5">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gestión de Pedidos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F3F4F6;color:#111827;max-width:520px;margin:0 auto;min-height:100dvh;overflow-x:hidden}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#F1F5F9;color:#1E293B;height:100vh;overflow:hidden}
 button,input,select,textarea{font-family:inherit}
-input[type=number]::-webkit-inner-spin-button{opacity:1}
-@keyframes loading-bar{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-/* ── Layout ── */
-.app{display:flex;flex-direction:column;min-height:100dvh}
-.page{display:none;flex-direction:column;flex:1;padding-bottom:70px}
-.page.active{display:flex}
-/* ── Nav ── */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;background:#fff;border-top:1px solid #E5E7EB;display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0)}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;border:none;background:none;font-size:10px;font-weight:600;color:#9CA3AF;gap:3px;cursor:pointer;letter-spacing:0.3px}
-.nav-btn.active{color:#4F46E5}
-.nav-btn svg{transition:transform .15s}
-.nav-btn.active svg{transform:scale(1.1)}
-/* ── Header ── */
-.hdr{padding:52px 16px 16px;color:#fff}
-.hdr-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.hdr-title{font-weight:800;font-size:20px;letter-spacing:-.3px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hdr-sub{font-size:13px;opacity:.75}
-.icon-btn{background:rgba(255,255,255,.2);border:none;border-radius:10px;padding:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
-/* ── Cards ── */
-.card-list{padding:14px 14px 4px;display:flex;flex-direction:column;gap:10px}
-.card{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
-.card-body{padding:14px 16px}
-/* ── Badges ── */
-.badge{display:inline-flex;align-items:center;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;letter-spacing:.3px;white-space:nowrap;border:1px solid transparent}
-.chip-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
-.chip-row::-webkit-scrollbar{display:none}
-.chip{border:none;border-radius:12px;padding:5px 12px;font-weight:700;font-size:12px;white-space:nowrap;cursor:pointer}
-/* ── Forms ── */
-.field{margin-bottom:14px}
-.lbl{display:block;font-size:11px;font-weight:700;color:#6B7280;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.inp{width:100%;padding:11px 14px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:15px;color:#111827;background:#FAFAFA;outline:none;box-sizing:border-box}
-.inp:focus{border-color:#6366F1}
-.sel{width:100%;padding:11px 14px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:15px;color:#111827;background:#FAFAFA;outline:none;box-sizing:border-box;appearance:none}
-.hint{font-size:12px;color:#9CA3AF;margin-top:4px}
-/* ── Buttons ── */
-.btn-row{display:flex;gap:8px;margin-top:10px}
-.btn{padding:13px 16px;border-radius:14px;font-weight:700;font-size:15px;border:none;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;flex:1}
-.btn-p{background:linear-gradient(135deg,#6366F1,#7C3AED);color:#fff}
-.btn-s{background:#F3F4F6;color:#374151}
+a{color:inherit;text-decoration:none}
+
+/* ── Layout principal ─────────────────────────────────────────────────────── */
+.layout{display:grid;grid-template-columns:260px 1fr;grid-template-rows:56px 1fr;height:100vh}
+
+/* ── Topbar ──────────────────────────────────────────────────────────────── */
+.topbar{grid-column:1/-1;background:#1E293B;display:flex;align-items:center;padding:0 20px;gap:16px;z-index:50;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.topbar-logo{display:flex;align-items:center;gap:8px;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.3px;width:220px}
+.topbar-logo svg{opacity:.8}
+.topbar-title{color:#94A3B8;font-size:13px;font-weight:500;flex:1}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#22C55E;flex-shrink:0}
+.sync-dot.off{background:#EF4444}
+.topbar-sync{display:flex;align-items:center;gap:6px;font-size:12px;color:#94A3B8}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.sidebar{background:#1E293B;overflow-y:auto;display:flex;flex-direction:column;border-right:1px solid #0F172A}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+
+.sb-section{padding:16px 12px 8px}
+.sb-section-title{font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.8px;padding:0 8px;margin-bottom:6px}
+.sb-nav-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:none;background:none;color:#94A3B8;font-size:13px;font-weight:600;cursor:pointer;width:100%;text-align:left;transition:background .1s,color .1s}
+.sb-nav-btn:hover{background:#334155;color:#E2E8F0}
+.sb-nav-btn.active{background:#4F46E5;color:#fff}
+.sb-nav-btn svg{flex-shrink:0;opacity:.7}
+.sb-nav-btn.active svg{opacity:1}
+
+.sb-prov-item{padding:9px 12px;border-radius:10px;cursor:pointer;transition:background .1s;margin-bottom:2px;border-left:3px solid transparent}
+.sb-prov-item:hover{background:#334155}
+.sb-prov-active{background:#312E81!important;border-left-color:#6366F1!important}
+.sb-prov-name{font-size:13px;font-weight:600;color:#CBD5E1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-prov-active .sb-prov-name{color:#fff}
+.sb-prov-meta{display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11px;color:#64748B}
+.sb-urg-badge{background:#FEE2E2;color:#991B1B;border-radius:10px;padding:1px 7px;font-weight:700}
+
+.sb-add-btn{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px dashed #334155;background:none;color:#64748B;font-size:12px;font-weight:600;cursor:pointer;width:calc(100% - 0px);transition:all .15s;margin-top:4px}
+.sb-add-btn:hover{border-color:#6366F1;color:#818CF8;background:#1E1B4B}
+
+.sb-divider{height:1px;background:#0F172A;margin:8px 12px}
+
+/* ── Main content ────────────────────────────────────────────────────────── */
+.main{background:#F1F5F9;overflow-y:auto;display:flex;flex-direction:column}
+.main::-webkit-scrollbar{width:6px}
+.main::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.page-hdr{background:#fff;border-bottom:1px solid #E2E8F0;padding:16px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.page-hdr-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.page-hdr-title{font-size:18px;font-weight:800;color:#1E293B;letter-spacing:-.3px}
+.page-hdr-sub{font-size:12px;color:#94A3B8;margin-top:1px}
+.page-hdr-actions{display:flex;gap:8px;align-items:center;margin-left:auto}
+
+/* ── Stat chips ──────────────────────────────────────────────────────────── */
+.stats-row{display:flex;gap:10px;padding:14px 24px;background:#fff;border-bottom:1px solid #E2E8F0;flex-shrink:0}
+.stat-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:none;cursor:pointer;transition:opacity .15s}
+.stat-chip:hover{opacity:.8}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 24px;background:#fff;border-bottom:1px solid #E2E8F0;flex-shrink:0}
+.toolbar-search{flex:1;max-width:320px;padding:8px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;color:#1E293B;background:#F8FAFC;outline:none;transition:border-color .15s}
+.toolbar-search:focus{border-color:#6366F1}
+.toolbar-sel{padding:8px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;background:#F8FAFC;color:#374151;outline:none}
+.total-badge{margin-left:auto;background:#EEF2FF;color:#4F46E5;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;border:none;cursor:pointer;transition:opacity .15s,background .15s;white-space:nowrap}
+.btn:hover{opacity:.88}
+.btn-p{background:#6366F1;color:#fff}
+.btn-s{background:#F1F5F9;color:#374151;border:1px solid #E2E8F0}
 .btn-d{background:#FEE2E2;color:#991B1B}
 .btn-g{background:#D1FAE5;color:#065F46}
 .btn-w{background:#25D366;color:#fff}
-/* ── FAB ── */
-.fab{position:fixed;bottom:82px;right:18px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#7C3AED);border:none;box-shadow:0 4px 16px rgba(99,102,241,.45);display:flex;align-items:center;justify-content:center;z-index:100;cursor:pointer}
-/* ── Search ── */
-.search-bar{padding:10px 14px;display:flex;gap:8px}
-.s-inp{flex:1;padding:9px 14px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:14px;background:#fff;outline:none;color:#111827}
-.s-sel{padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:12px;font-size:13px;background:#fff;outline:none}
-/* ── Modales ── */
-.ov{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center}
+.btn-o{background:#F8FAFC;color:#374151;border:1px solid #E2E8F0}
+
+/* ── Tabla ───────────────────────────────────────────────────────────────── */
+.tbl-wrap{flex:1;overflow-y:auto;padding:16px 24px}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+thead th{background:#F8FAFC;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #E2E8F0;white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:#374151}
+.prod-row{border-bottom:1px solid #F1F5F9;transition:background .1s}
+.prod-row:last-child{border-bottom:none}
+.prod-row:hover{background:#F8FAFC}
+td{padding:10px 14px;vertical-align:middle}
+.td-name{font-weight:600;font-size:13px;color:#1E293B;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-rub{font-size:12px;color:#64748B;white-space:nowrap}
+.td-num{font-size:13px;color:#374151;width:120px}
+.td-urg{width:110px}
+.td-act{width:80px;text-align:right}
+.tbl-inp{width:90px;padding:5px 8px;border:1.5px solid #E2E8F0;border-radius:7px;font-size:13px;font-weight:600;text-align:center;outline:none;background:#F8FAFC;color:#1E293B}
+.tbl-inp:focus{border-color:#6366F1;background:#fff}
+.stk-inp-tbl:focus{border-color:#94A3B8}
+.apedir-inp-tbl{border-color:#A5B4FC;color:#4F46E5;background:#EEF2FF}
+.apedir-inp-tbl:focus{border-color:#6366F1}
+.tbl-btn{border:none;border-radius:6px;padding:5px 7px;cursor:pointer;display:inline-flex;align-items:center;transition:opacity .15s}
+.tbl-btn:hover{opacity:.75}
+.tbl-btn-e{background:#EEF2FF;margin-right:4px}
+.tbl-btn-d{background:#FEE2E2}
+
+/* ── Modales ─────────────────────────────────────────────────────────────── */
+.ov{position:fixed;inset:0;z-index:500;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .ov.open{display:flex}
-.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:92dvh;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,.18);padding-bottom:env(safe-area-inset-bottom,12px)}
-.m-handle{display:flex;justify-content:center;padding:12px 0 0}
-.m-bar{width:40px;height:4px;border-radius:2px;background:#D1D5DB}
-.m-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 8px;border-bottom:1px solid #F3F4F6}
-.m-title{font-weight:700;font-size:17px;color:#111827}
-.m-close{background:#F3F4F6;border:none;border-radius:20px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
-.m-body{flex:1;overflow-y:auto;padding:14px 18px}
-/* ── Confirm ── */
-.conf-ov{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+.m-hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #F1F5F9}
+.m-title{font-weight:700;font-size:17px;color:#1E293B}
+.m-close{background:#F1F5F9;border:none;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.m-close:hover{background:#E2E8F0}
+.m-body{flex:1;overflow-y:auto;padding:20px 22px}
+.field{margin-bottom:16px}
+.lbl{display:block;font-size:11px;font-weight:700;color:#64748B;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.inp{width:100%;padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;color:#1E293B;background:#F8FAFC;outline:none}
+.inp:focus{border-color:#6366F1;background:#fff}
+.sel{width:100%;padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;color:#1E293B;background:#F8FAFC;outline:none;appearance:none}
+.sel:focus{border-color:#6366F1}
+.hint{font-size:12px;color:#94A3B8;margin-top:4px}
+.btn-row{display:flex;gap:8px;margin-top:16px}
+
+/* ── Confirm (centrado) ──────────────────────────────────────────────────── */
+.conf-ov{position:fixed;inset:0;z-index:800;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .conf-ov.open{display:flex}
-.conf-box{background:#fff;border-radius:20px;padding:22px;width:100%;max-width:340px}
-/* ── Bottom action bar ── */
-.action-bar{position:fixed;bottom:62px;left:0;right:0;max-width:520px;margin:0 auto;background:#fff;border-top:1px solid #E5E7EB;padding:10px 14px;display:flex;gap:8px;align-items:center;box-shadow:0 -4px 16px rgba(0,0,0,.07);z-index:100}
-/* ── Selector productos ── */
-.prod-sel-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #F3F4F6;cursor:pointer}
+.conf-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;letter-spacing:.3px;white-space:nowrap;border:1px solid transparent}
+
+/* ── Selector de productos (modal grande) ────────────────────────────────── */
+.modal-lg{max-width:640px}
+.prod-sel-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9;cursor:pointer}
 .prod-sel-item:last-child{border-bottom:none}
-.chk{width:22px;height:22px;border-radius:6px;border:2px solid #D1D5DB;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s}
+.prod-sel-item:hover{background:#F8FAFC;margin:0 -22px;padding:10px 22px}
+.chk{width:20px;height:20px;border-radius:5px;border:2px solid #CBD5E1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .1s}
 .chk.on{background:#6366F1;border-color:#6366F1}
-/* ── WhatsApp list ── */
-.wa-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F3F4F6}
-.wa-name{flex:1;font-size:14px;font-weight:600;color:#111827}
-.wa-qty{width:70px;padding:8px;border:2px solid #6366F1;border-radius:10px;font-size:16px;font-weight:700;color:#4F46E5;text-align:center;background:#EEF2FF;outline:none}
-.wa-del{background:#FEE2E2;border:none;border-radius:8px;padding:7px;cursor:pointer;display:flex}
-/* ── Drop zone ── */
-.drop{border:2px dashed #C7D2FE;border-radius:14px;padding:30px 16px;text-align:center;cursor:pointer;background:#F5F3FF;margin-bottom:14px}
-/* ── Empty ── */
-.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;color:#9CA3AF;flex:1}
-.empty-ico{font-size:44px;margin-bottom:10px}
-.empty-t{font-size:15px;font-weight:600;color:#6B7280;margin-bottom:4px}
-/* ── Mini stat ── */
-.stat-row{display:flex;gap:8px;overflow-x:auto;padding:0 14px 10px;scrollbar-width:none}
-.stat-row::-webkit-scrollbar{display:none}
-.stat{background:#fff;border-radius:12px;padding:10px 14px;flex-shrink:0;min-width:80px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.stat-n{font-size:22px;font-weight:800}
-.stat-l{font-size:11px;font-weight:600;margin-top:1px}
-/* ── Rubro row ── */
-.rub-row{display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #F3F4F6}
-.rub-name{flex:1;font-size:14px;font-weight:600;color:#111827}
-.rub-min{font-size:13px;color:#6B7280;margin-right:4px}
-/* ── Prod row ── */
-.prow{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #F3F4F6}
-.prow:last-child{border-bottom:none}
-.prow-name{flex:1;font-weight:600;font-size:13px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.prow-rub{font-size:11px;color:#9CA3AF;margin-top:2px}
-/* Prod stock card */
-.stk-card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);margin:0 14px 8px}
-.stk-inner{padding:11px 13px}
-.stk-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.stk-actions{display:flex;gap:5px;align-items:center;flex-shrink:0;margin-left:6px}
-.act-btn{border:none;border-radius:8px;padding:5px;display:flex;cursor:pointer}
-.stk-inputs{display:flex;gap:8px}
-.stk-f{flex:1}
-.stk-lbl{font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:3px}
-.stk-inp{width:100%;padding:8px;border-radius:10px;font-size:16px;font-weight:700;text-align:center;outline:none;box-sizing:border-box}
+
+/* ── WhatsApp modal ──────────────────────────────────────────────────────── */
+.wa-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F1F5F9}
+.wa-name{flex:1;font-size:13px;font-weight:600;color:#1E293B}
+.wa-qty{width:70px;padding:6px 8px;border:2px solid #6366F1;border-radius:8px;font-size:14px;font-weight:700;color:#4F46E5;text-align:center;background:#EEF2FF;outline:none}
+.wa-del{background:#FEE2E2;border:none;border-radius:7px;padding:6px;cursor:pointer;display:flex}
+
+/* ── Import drop zone ────────────────────────────────────────────────────── */
+.drop{border:2px dashed #C7D2FE;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;background:#F5F3FF;margin-bottom:14px;transition:background .15s}
+.drop:hover{background:#EEF2FF}
+
+/* ── Empty states ────────────────────────────────────────────────────────── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#94A3B8;flex:1}
+.empty-ico{font-size:44px;margin-bottom:12px}
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1E293B;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none}
+
+/* ── Loading screen ──────────────────────────────────────────────────────── */
+#loading-screen{position:fixed;inset:0;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff}
+@keyframes loading-bar{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* ── Páginas ─────────────────────────────────────────────────────────────── */
+.page{display:none;flex-direction:column;flex:1;overflow:hidden}
+.page.active{display:flex}
 </style>
 </head>
 <body>
-<div class="app">
 
 <!-- Loading screen -->
-<div id="loading-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#4F46E5,#7C3AED);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff">
+<div id="loading-screen">
   <div style="font-size:44px;margin-bottom:16px">🚚</div>
-  <div style="font-weight:800;font-size:22px;margin-bottom:8px">Pedidos</div>
-  <div style="font-size:14px;opacity:0.7;margin-bottom:24px">Conectando con la base de datos...</div>
-  <div style="width:40px;height:4px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden">
+  <div style="font-weight:800;font-size:24px;margin-bottom:8px">Gestión de Pedidos</div>
+  <div style="font-size:14px;opacity:0.7;margin-bottom:28px">Conectando con la base de datos...</div>
+  <div style="width:48px;height:4px;background:rgba(255,255,255,.3);border-radius:2px;overflow:hidden">
     <div style="width:100%;height:100%;background:#fff;border-radius:2px;animation:loading-bar 1.2s ease-in-out infinite"></div>
   </div>
 </div>
 
-<!-- ══ NAV ══════════════════════════════════════════════════════════════════ -->
-<nav class="bottom-nav">
-  <button class="nav-btn active" id="nav-proveedores" onclick="goTab('proveedores')">
+<div class="layout">
+
+<!-- ══ TOPBAR ════════════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-logo">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17H3V5a1 1 0 011-1h9a1 1 0 011 1v3"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h2m4 0h1a1 1 0 001-1v-3.586a1 1 0 00-.293-.707L18 9H13v8z"/><circle cx="6" cy="20" r="2"/><circle cx="18" cy="20" r="2"/></svg>
-    Proveedores
-  </button>
-  <button class="nav-btn" id="nav-productos" onclick="goTab('productos')">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-    Productos
-  </button>
-  <button class="nav-btn" id="nav-rubros" onclick="goTab('rubros')">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-    Rubros
-  </button>
-</nav>
+    Gestión de Pedidos
+  </div>
+  <span id="topbar-breadcrumb" class="topbar-title"></span>
+  <div class="topbar-sync">
+    <div id="sync-dot" class="sync-dot"></div>
+    <span id="sync-lbl">Conectado</span>
+  </div>
+</header>
 
-<!-- ══ PAGE: PROVEEDORES ═════════════════════════════════════════════════════ -->
-<div id="page-proveedores" class="page active">
-  <div class="hdr" style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">
-    <div class="hdr-row">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17H3V5a1 1 0 011-1h9a1 1 0 011 1v3"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h2m4 0h1a1 1 0 001-1v-3.586a1 1 0 00-.293-.707L18 9H13v8z"/><circle cx="6" cy="20" r="2"/><circle cx="18" cy="20" r="2"/></svg>
-      <span class="hdr-title">Mis Proveedores</span>
-    </div>
-    <div id="prov-sub" class="hdr-sub"></div>
-  </div>
-  <div id="prov-list" class="card-list"></div>
-  <button class="fab" onclick="openModal('m-prov',resetProvForm)">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-  </button>
-</div>
+<!-- ══ SIDEBAR ════════════════════════════════════════════════════════════════ -->
+<aside class="sidebar">
 
-<!-- ══ PAGE: DETALLE PROVEEDOR ══════════════════════════════════════════════ -->
-<div id="page-prov-detail" class="page">
-  <div id="pd-hdr" class="hdr">
-    <div class="hdr-row">
-      <button class="icon-btn" onclick="goProvList()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button>
-      <span id="pd-title" class="hdr-title"></span>
-      <button class="icon-btn" onclick="openImport()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 12l-4-4m0 0l-4 4m4-4v12"/></svg></button>
-      <button class="icon-btn" onclick="editProv()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-    </div>
-    <div id="pd-chips" class="chip-row"></div>
-  </div>
-  <div class="search-bar">
-    <input id="pd-search" class="s-inp" placeholder="Buscar..." oninput="renderDetail()">
-    <select id="pd-sort" class="s-sel" onchange="renderDetail()">
-      <option value="urgencia">Urgencia</option>
-      <option value="nombre">Nombre</option>
-      <option value="stock">Stock</option>
-    </select>
-  </div>
-  <div id="pd-list" style="flex:1;overflow-y:auto"></div>
-  <div class="action-bar">
-    <div style="flex:1">
-      <div style="font-size:10px;color:#9CA3AF;font-weight:700">TOTAL A PEDIR</div>
-      <div id="pd-total" style="font-size:20px;font-weight:800;color:#4F46E5">0 unid.</div>
-    </div>
-    <button class="btn btn-s" style="flex:0;padding:11px 12px" onclick="openSelectProds()">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-      Agregar
-    </button>
-    <button class="btn btn-w" style="flex:0;padding:11px 12px" onclick="openWA()">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      WhatsApp
-    </button>
-    <button class="btn btn-d" style="flex:0;padding:11px 11px" onclick="confirmDelProv()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg>
+  <!-- Proveedores -->
+  <div class="sb-section">
+    <div class="sb-section-title">Proveedores</div>
+    <div id="prov-list"></div>
+    <button class="sb-add-btn" onclick="openModal('m-prov',resetProvForm)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Nuevo proveedor
     </button>
   </div>
-</div>
 
-<!-- ══ PAGE: PRODUCTOS DB ════════════════════════════════════════════════════ -->
-<div id="page-productos" class="page">
-  <div class="hdr" style="background:linear-gradient(135deg,#0EA5E9,#0284C7)">
-    <div class="hdr-row">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-      <span class="hdr-title">Base de Productos</span>
-      <button class="icon-btn" onclick="openImportDB()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 12l-4-4m0 0l-4 4m4-4v12"/></svg></button>
+  <div class="sb-divider"></div>
+
+  <!-- Nav -->
+  <div class="sb-section">
+    <div class="sb-section-title">Base de datos</div>
+    <button class="sb-nav-btn" id="nav-productos" onclick="goTab('productos')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Productos
+    </button>
+    <button class="sb-nav-btn" id="nav-rubros" onclick="goTab('rubros')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+      Rubros y mínimos
+    </button>
+  </div>
+
+</aside>
+
+<!-- ══ MAIN ════════════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- ── PÁGINA: Welcome ─────────────────────────────────────────────────── -->
+  <div id="page-welcome" class="page active">
+    <div style="display:flex;align-items:center;justify-content:center;flex:1;flex-direction:column;color:#94A3B8">
+      <div style="font-size:56px;margin-bottom:16px">🚚</div>
+      <div style="font-weight:700;font-size:20px;color:#475569;margin-bottom:6px">Seleccioná un proveedor</div>
+      <div style="font-size:14px">o creá uno nuevo desde el panel izquierdo</div>
     </div>
-    <div id="db-sub" class="hdr-sub"></div>
   </div>
-  <div class="search-bar">
-    <input id="db-search" class="s-inp" placeholder="Buscar producto..." oninput="renderDB()">
-    <select id="db-filter-rub" class="s-sel" onchange="renderDB()"><option value="">Todos</option></select>
-  </div>
-  <div id="db-list" class="card" style="margin:0 14px;overflow:hidden;flex:1"></div>
-  <button class="fab" onclick="openModal('m-prod',()=>resetProdForm(null))">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-  </button>
-</div>
 
-<!-- ══ PAGE: RUBROS ══════════════════════════════════════════════════════════ -->
-<div id="page-rubros" class="page">
-  <div class="hdr" style="background:linear-gradient(135deg,#10B981,#059669)">
-    <div class="hdr-row">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-      <span class="hdr-title">Rubros y Mínimos</span>
+  <!-- ── PÁGINA: Detalle proveedor ───────────────────────────────────────── -->
+  <div id="page-prov-detail" class="page">
+    <div class="page-hdr">
+      <div id="pd-hdr-icon" class="page-hdr-icon" style="background:#EEF2FF">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17H3V5a1 1 0 011-1h9a1 1 0 011 1v3"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h2m4 0h1a1 1 0 001-1v-3.586a1 1 0 00-.293-.707L18 9H13v8z"/><circle cx="6" cy="20" r="2"/><circle cx="18" cy="20" r="2"/></svg>
+      </div>
+      <div>
+        <div id="pd-title" class="page-hdr-title"></div>
+        <div id="pd-contact" class="page-hdr-sub"></div>
+      </div>
+      <div class="page-hdr-actions">
+        <button class="btn btn-s" onclick="openImport()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 12l-4-4m0 0l-4 4m4-4v12"/></svg>Importar Excel</button>
+        <button class="btn btn-s" onclick="openSelectProds()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Agregar productos</button>
+        <button class="btn btn-w" onclick="openWA()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>WhatsApp</button>
+        <button class="btn btn-s" onclick="editProv()" title="Editar proveedor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn btn-d" onclick="confirmDelProv()" title="Eliminar proveedor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg></button>
+      </div>
     </div>
-    <div class="hdr-sub">Configurá el stock mínimo por rubro</div>
+    <div class="stats-row" id="pd-chips"></div>
+    <div class="toolbar">
+      <input id="pd-search" class="toolbar-search" placeholder="Buscar producto..." oninput="renderDetail()">
+      <select id="pd-sort" class="toolbar-sel" onchange="renderDetail()">
+        <option value="urgencia">Ordenar: Urgencia</option>
+        <option value="nombre">Ordenar: Nombre</option>
+        <option value="stock">Ordenar: Stock</option>
+      </select>
+      <div id="pd-total" class="total-badge">0 unid.</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th onclick="setSortPD('nombre')" style="width:30%">Producto</th>
+          <th onclick="setSortPD('rubro')">Rubro</th>
+          <th onclick="setSortPD('stock')">Stock actual</th>
+          <th>Mínimo</th>
+          <th>Urgencia</th>
+          <th onclick="setSortPD('apedir')">A pedir</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="pd-list"></tbody>
+      </table>
+    </div>
   </div>
-  <div id="rub-list" class="card" style="margin:14px;overflow:hidden"></div>
-  <button class="fab" style="background:linear-gradient(135deg,#10B981,#059669);box-shadow:0 4px 16px rgba(16,185,129,.45)" onclick="openModal('m-rub',()=>resetRubForm(null))">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-  </button>
-</div>
 
-<!-- ══ MODAL: PROVEEDOR ═════════════════════════════════════════════════════ -->
+  <!-- ── PÁGINA: Productos DB ─────────────────────────────────────────────── -->
+  <div id="page-productos" class="page">
+    <div class="page-hdr">
+      <div class="page-hdr-icon" style="background:#E0F2FE"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg></div>
+      <div><div class="page-hdr-title">Base de Productos</div><div id="db-sub" class="page-hdr-sub"></div></div>
+      <div class="page-hdr-actions">
+        <button class="btn btn-s" onclick="openImportDB()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 12l-4-4m0 0l-4 4m4-4v12"/></svg>Importar Excel</button>
+        <button class="btn btn-p" onclick="openModal('m-prod',()=>resetProdForm(null))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Nuevo producto</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input id="db-search" class="toolbar-search" placeholder="Buscar producto..." oninput="renderDB()">
+      <select id="db-filter-rub" class="toolbar-sel" onchange="renderDB()"><option value="">Todos los rubros</option></select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:50%">Producto</th>
+          <th>Rubro</th>
+          <th>Mínimo</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="db-list"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── PÁGINA: Rubros ───────────────────────────────────────────────────── -->
+  <div id="page-rubros" class="page">
+    <div class="page-hdr">
+      <div class="page-hdr-icon" style="background:#D1FAE5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg></div>
+      <div><div class="page-hdr-title">Rubros y Mínimos</div><div class="page-hdr-sub">Configurá el stock mínimo por rubro</div></div>
+      <div class="page-hdr-actions">
+        <button class="btn btn-p" style="background:#059669" onclick="openModal('m-rub',()=>resetRubForm(null))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>Nuevo rubro</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:60%">Nombre del rubro</th>
+          <th>Stock mínimo</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="rub-list"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+</div><!-- /layout -->
+
+<!-- ══ MODALES ════════════════════════════════════════════════════════════════ -->
+
+<!-- Proveedor -->
 <div id="m-prov" class="ov" onclick="closeModal('m-prov')">
 <div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span id="m-prov-t" class="m-title">Nuevo proveedor</span><button class="m-close" onclick="closeModal('m-prov')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+  <div class="m-hdr"><span id="m-prov-t" class="m-title">Nuevo proveedor</span><button class="m-close" onclick="closeModal('m-prov')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
   <div class="m-body">
     <div class="field"><label class="lbl">Nombre</label><input id="f-prov-nom" class="inp" placeholder="Ej: Distribuidora San Juan"></div>
     <div class="field"><label class="lbl">Contacto (opcional)</label><input id="f-prov-con" class="inp" placeholder="+54 11 ..."></div>
     <input type="hidden" id="f-prov-id">
-    <div class="btn-row">
-      <button class="btn btn-s" onclick="closeModal('m-prov')">Cancelar</button>
-      <button class="btn btn-p" onclick="saveProv()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Guardar</button>
-    </div>
+    <div class="btn-row"><button class="btn btn-s" onclick="closeModal('m-prov')">Cancelar</button><button class="btn btn-p" onclick="saveProv()" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Guardar</button></div>
   </div>
 </div></div>
 
-<!-- ══ MODAL: PRODUCTO DB ════════════════════════════════════════════════════ -->
+<!-- Producto DB -->
 <div id="m-prod" class="ov" onclick="closeModal('m-prod')">
 <div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span id="m-prod-t" class="m-title">Nuevo producto</span><button class="m-close" onclick="closeModal('m-prod')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+  <div class="m-hdr"><span id="m-prod-t" class="m-title">Nuevo producto</span><button class="m-close" onclick="closeModal('m-prod')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
   <div class="m-body">
     <div class="field"><label class="lbl">Nombre del producto</label><input id="f-prod-nom" class="inp" placeholder="Ej: Aceite de oliva 500ml"></div>
-    <div class="field">
-      <label class="lbl">Rubro</label>
-      <select id="f-prod-rub" class="sel" onchange="updateMinHint()"><option value="">Sin rubro</option></select>
-    </div>
-    <div class="field">
-      <label class="lbl">Mínimo manual (opcional)</label>
-      <input id="f-prod-min" type="number" min="0" class="inp" placeholder="Dejar vacío = usar mínimo del rubro">
-      <div id="f-prod-min-hint" class="hint"></div>
-    </div>
+    <div class="field"><label class="lbl">Rubro</label><select id="f-prod-rub" class="sel" onchange="updateMinHint()"><option value="">Sin rubro</option></select></div>
+    <div class="field"><label class="lbl">Mínimo manual (opcional)</label><input id="f-prod-min" type="number" min="0" class="inp" placeholder="Dejar vacío = usar mínimo del rubro"><div id="f-prod-min-hint" class="hint"></div></div>
     <input type="hidden" id="f-prod-id">
-    <div class="btn-row">
-      <button class="btn btn-s" onclick="closeModal('m-prod')">Cancelar</button>
-      <button class="btn btn-p" onclick="saveProdDB()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span id="f-prod-btn">Agregar</span></button>
-    </div>
+    <div class="btn-row"><button class="btn btn-s" onclick="closeModal('m-prod')">Cancelar</button><button class="btn btn-p" onclick="saveProdDB()" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span id="f-prod-btn">Agregar</span></button></div>
   </div>
 </div></div>
 
-<!-- ══ MODAL: RUBRO ══════════════════════════════════════════════════════════ -->
+<!-- Rubro -->
 <div id="m-rub" class="ov" onclick="closeModal('m-rub')">
 <div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span id="m-rub-t" class="m-title">Nuevo rubro</span><button class="m-close" onclick="closeModal('m-rub')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+  <div class="m-hdr"><span id="m-rub-t" class="m-title">Nuevo rubro</span><button class="m-close" onclick="closeModal('m-rub')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
   <div class="m-body">
     <div class="field"><label class="lbl">Nombre del rubro</label><input id="f-rub-nom" class="inp" placeholder="Ej: Aceites y vinagres"></div>
     <div class="field"><label class="lbl">Stock mínimo</label><input id="f-rub-min" type="number" min="0" class="inp" placeholder="Ej: 10"></div>
     <input type="hidden" id="f-rub-id">
-    <div class="btn-row">
-      <button class="btn btn-s" onclick="closeModal('m-rub')">Cancelar</button>
-      <button class="btn btn-p" style="background:linear-gradient(135deg,#10B981,#059669)" onclick="saveRub()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Guardar</button>
-    </div>
+    <div class="btn-row"><button class="btn btn-s" onclick="closeModal('m-rub')">Cancelar</button><button class="btn btn-p" style="flex:1;background:#059669" onclick="saveRub()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Guardar</button></div>
   </div>
 </div></div>
 
-<!-- ══ MODAL: EDITAR STOCK PROVEEDOR ════════════════════════════════════════ -->
+<!-- Editar mínimo en proveedor -->
 <div id="m-stk" class="ov" onclick="closeModal('m-stk')">
 <div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span id="m-stk-t" class="m-title">Editar producto</span><button class="m-close" onclick="closeModal('m-stk')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+  <div class="m-hdr"><span id="m-stk-t" class="m-title">Editar mínimo</span><button class="m-close" onclick="closeModal('m-stk')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
   <div class="m-body">
-    <div id="m-stk-name" style="font-weight:700;font-size:15px;color:#111827;margin-bottom:4px"></div>
-    <div id="m-stk-sub" style="font-size:12px;color:#9CA3AF;margin-bottom:16px"></div>
-    <div class="field"><label class="lbl">Mínimo manual (sobreescribe el del rubro)</label><input id="f-stk-min" type="number" min="0" class="inp"><div id="f-stk-min-hint" class="hint"></div></div>
+    <div id="m-stk-name" style="font-weight:700;font-size:15px;color:#1E293B;margin-bottom:4px"></div>
+    <div id="m-stk-sub" style="font-size:12px;color:#94A3B8;margin-bottom:16px"></div>
+    <div class="field"><label class="lbl">Mínimo manual para este proveedor</label><input id="f-stk-min" type="number" min="0" class="inp"><div id="f-stk-min-hint" class="hint"></div></div>
     <input type="hidden" id="f-stk-pid">
-    <div class="btn-row">
-      <button class="btn btn-s" onclick="closeModal('m-stk')">Cancelar</button>
-      <button class="btn btn-p" onclick="saveStkEdit()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Guardar</button>
-    </div>
+    <div class="btn-row"><button class="btn btn-s" onclick="closeModal('m-stk')">Cancelar</button><button class="btn btn-p" onclick="saveStkEdit()" style="flex:1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Guardar</button></div>
   </div>
 </div></div>
 
-<!-- ══ MODAL: SELECTOR PRODUCTOS ════════════════════════════════════════════ -->
+<!-- Selector de productos -->
 <div id="m-sel" class="ov" onclick="closeModal('m-sel')">
-<div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span class="m-title">Agregar productos</span><button class="m-close" onclick="closeModal('m-sel')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-  <div style="padding:10px 18px 0"><input id="sel-search" class="s-inp" style="width:100%" placeholder="Buscar..." oninput="renderSelList()"><div id="sel-count" style="font-size:12px;color:#6366F1;font-weight:600;margin-top:8px;min-height:16px"></div></div>
-  <div id="sel-list" class="m-body" style="padding-top:8px"></div>
-  <div style="padding:10px 18px"><button class="btn btn-p" style="width:100%" onclick="confirmSel()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span id="sel-btn-txt">Agregar seleccionados</span></button></div>
+<div class="modal modal-lg" onclick="event.stopPropagation()">
+  <div class="m-hdr"><span class="m-title">Agregar productos al proveedor</span><button class="m-close" onclick="closeModal('m-sel')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+  <div style="padding:12px 22px 0;display:flex;gap:10px;align-items:center">
+    <input id="sel-search" class="inp" style="flex:1" placeholder="Buscar..." oninput="renderSelList()">
+    <div id="sel-count" style="font-size:12px;color:#6366F1;font-weight:600;white-space:nowrap;min-width:120px;text-align:right"></div>
+  </div>
+  <div id="sel-list" class="m-body"></div>
+  <div style="padding:12px 22px;border-top:1px solid #F1F5F9"><button class="btn btn-p" style="width:100%" onclick="confirmSel()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span id="sel-btn-txt">Agregar seleccionados</span></button></div>
 </div></div>
 
-<!-- ══ MODAL: IMPORT ═════════════════════════════════════════════════════════ -->
+<!-- Import -->
 <div id="m-import" class="ov" onclick="closeModal('m-import')">
 <div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span id="m-import-t" class="m-title">Importar Excel</span><button class="m-close" onclick="closeModal('m-import')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+  <div class="m-hdr"><span id="m-import-t" class="m-title">Importar Excel</span><button class="m-close" onclick="closeModal('m-import')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
   <div id="m-import-body" class="m-body"></div>
 </div></div>
 
-<!-- ══ MODAL: WHATSAPP ═══════════════════════════════════════════════════════ -->
+<!-- WhatsApp -->
 <div id="m-wa" class="ov" onclick="closeModal('m-wa')">
-<div class="modal" onclick="event.stopPropagation()">
-  <div class="m-handle"><div class="m-bar"></div></div>
-  <div class="m-hdr"><span class="m-title">📋 Lista para el proveedor</span><button class="m-close" onclick="closeModal('m-wa')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-  <div style="padding:8px 18px 0;font-size:12px;color:#9CA3AF">Editá cantidades y tocá Enviar por WhatsApp</div>
+<div class="modal modal-lg" onclick="event.stopPropagation()">
+  <div class="m-hdr"><span class="m-title">📋 Pedido para el proveedor</span><button class="m-close" onclick="closeModal('m-wa')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
   <div id="wa-list" class="m-body"></div>
-  <div style="padding:10px 18px;display:flex;gap:8px">
-    <button class="btn btn-s" style="flex:0;padding:12px 14px" onclick="copyList()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>
-    <button class="btn btn-w" onclick="sendWA()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>Enviar por WhatsApp</button>
+  <div style="padding:12px 22px;border-top:1px solid #F1F5F9;display:flex;gap:8px">
+    <button class="btn btn-s" onclick="copyList()" title="Copiar texto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copiar</button>
+    <button class="btn btn-w" onclick="sendWA()" style="flex:1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>Enviar por WhatsApp</button>
   </div>
 </div></div>
 
-<!-- ══ CONFIRM ════════════════════════════════════════════════════════════════ -->
+<!-- Confirm -->
 <div id="m-conf" class="conf-ov" onclick="closeModal('m-conf')">
 <div class="conf-box" onclick="event.stopPropagation()">
-  <div id="conf-t" style="font-weight:700;font-size:17px;margin-bottom:8px"></div>
-  <div id="conf-m" style="font-size:14px;color:#6B7280;margin-bottom:18px;line-height:1.5"></div>
-  <div class="btn-row">
-    <button class="btn btn-s" onclick="closeModal('m-conf')">Cancelar</button>
-    <button id="conf-ok" class="btn btn-d">Eliminar</button>
-  </div>
+  <div id="conf-t" style="font-weight:700;font-size:18px;margin-bottom:10px;color:#1E293B"></div>
+  <div id="conf-m" style="font-size:14px;color:#64748B;margin-bottom:22px;line-height:1.6"></div>
+  <div class="btn-row"><button class="btn btn-s" onclick="closeModal('m-conf')">Cancelar</button><button id="conf-ok" class="btn btn-d" style="flex:1">Eliminar</button></div>
 </div></div>
 
 <input type="file" id="f-import" accept=".xlsx,.xls,.csv" style="display:none">
+<div id="toast"></div>
 
-</div><!-- /app -->
 <script>
+
 // ══ DATA MODEL ════════════════════════════════════════════════════════════════
 let DB = { rubros:[], productos:[], proveedores:[] };
 
@@ -572,16 +641,15 @@ const closeModal = id => document.getElementById(id).classList.remove("open");
 // ══ RUBROS ════════════════════════════════════════════════════════════════════
 function renderRubros() {
   const el = document.getElementById("rub-list");
-  if (!DB.rubros.length) { el.innerHTML = `<div class="empty"><div class="empty-ico">📂</div><div class="empty-t">No hay rubros</div><div>Tocá + para agregar uno</div></div>`; return; }
-  el.innerHTML = DB.rubros.sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(r=>`
-  <div class="rub-row">
-    <div style="flex:1">
-      <div class="rub-name">${esc(r.nombre)}</div>
-      <div style="font-size:11px;color:#9CA3AF">Mínimo: ${r.minimo} unidades</div>
-    </div>
-    <button class="act-btn" style="background:#EEF2FF;margin-right:4px" onclick="openModal('m-rub',()=>resetRubForm('${r.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-    <button class="act-btn" style="background:#FEE2E2" onclick="delRub('${r.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg></button>
-  </div>`).join("");
+  if (!DB.rubros.length) { el.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:50px;color:#9CA3AF"><div style="font-size:36px;margin-bottom:10px">📂</div><div style="font-weight:600;color:#6B7280">No hay rubros — hacé clic en Nuevo Rubro</div></td></tr>`; return; }
+  el.innerHTML = DB.rubros.sort((a,b)=>a.nombre.localeCompare(b.nombre)).map(r=>`<tr class="prod-row">
+      <td class="td-name">${esc(r.nombre)}</td>
+      <td class="td-num" style="font-weight:700;color:#374151">${r.minimo} unid.</td>
+      <td class="td-act">
+        <button class="tbl-btn tbl-btn-e" onclick="openModal('m-rub',()=>resetRubForm('${r.id}'))"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="tbl-btn tbl-btn-d" onclick="delRub('${r.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg></button>
+      </td>
+    </tr>`).join("");
 }
 
 function resetRubForm(id) {
@@ -642,18 +710,20 @@ function renderDB() {
   }).sort((a,b)=>a.nombre.localeCompare(b.nombre));
 
   const el = document.getElementById("db-list");
-  if (!prods.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><div class="empty-t">${DB.productos.length===0?"Base de datos vacía":"Sin resultados"}</div><div>${DB.productos.length===0?"Importá un Excel o agregá manualmente":""}</div></div>`; return; }
+  if (!prods.length) { el.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:50px;color:#9CA3AF"><div style="font-size:36px;margin-bottom:10px">📦</div><div style="font-weight:600;color:#6B7280;font-size:15px">${DB.productos.length===0?"Base de datos vacía — importá un Excel o agregá manualmente":"Sin resultados"}</div></td></tr>`; return; }
   el.innerHTML = prods.map(p=>{
     const rub = getRubro(p.rubroId);
-    const min = p.minimoManual>0 ? `mín: ${p.minimoManual} (manual)` : rub ? `mín: ${rub.minimo} (${rub.nombre})` : "sin mínimo";
-    return `<div class="prow">
-      <div style="flex:1;min-width:0">
-        <div class="prow-name">${esc(p.nombre)}</div>
-        <div class="prow-rub">${esc(rub?.nombre||"Sin rubro")} · ${min}</div>
-      </div>
-      <button class="act-btn" style="background:#EEF2FF;margin-right:4px" onclick="openModal('m-prod',()=>resetProdForm('${p.id}'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-      <button class="act-btn" style="background:#FEE2E2" onclick="delProdDB('${p.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg></button>
-    </div>`;
+    const minV = p.minimoManual>0?p.minimoManual:rub?rub.minimo:5;
+    const minSrc = p.minimoManual>0?"manual":rub?rub.nombre:"defecto";
+    return `<tr class="prod-row">
+      <td class="td-name" title="${esc(p.nombre)}">${esc(p.nombre)}</td>
+      <td class="td-rub">${esc(rub?.nombre||"—")}</td>
+      <td class="td-num" style="color:#6B7280">${minV} <span style="color:#9CA3AF;font-size:11px">(${esc(minSrc)})</span></td>
+      <td class="td-act">
+        <button class="tbl-btn tbl-btn-e" onclick="openModal('m-prod',()=>resetProdForm('${p.id}'))"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="tbl-btn tbl-btn-d" onclick="delProdDB('${p.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg></button>
+      </td>
+    </tr>`;
   }).join("");
 }
 
@@ -694,28 +764,19 @@ function renderProvList() {
   const el  = document.getElementById("prov-list");
   const sub = document.getElementById("prov-sub");
   sub.textContent = DB.proveedores.length===0 ? "Agregá tu primer proveedor" : `${DB.proveedores.length} proveedor${DB.proveedores.length>1?"es":""}`;
-  if (!DB.proveedores.length) { el.innerHTML=`<div class="empty"><div class="empty-ico">🚚</div><div class="empty-t">Sin proveedores</div><div>Tocá + para agregar uno</div></div>`; return; }
+  if (!DB.proveedores.length) { el.innerHTML=`<div style="padding:20px 16px;color:#9CA3AF;font-size:13px;text-align:center">Sin proveedores.<br>Hacé clic en Nuevo Proveedor.</div>`; return; }
   el.innerHTML = DB.proveedores.map((prov,i)=>{
     const color = PCOLORS[i%PCOLORS.length];
     const urgs  = (prov.productos||[]).map(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); return getUrg(pp.stock, getMin(p,pp)); });
     const ss=urgs.filter(u=>u==="SIN STOCK").length, cr=urgs.filter(u=>u==="CRÍTICO").length, bj=urgs.filter(u=>u==="BAJO").length, urg=ss+cr;
-    return `<div class="card" style="border-left:5px solid ${color};cursor:pointer" onclick="goProvDetail('${prov.id}')">
-      <div class="card-body">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div><div style="font-weight:700;font-size:16px;color:#111827;margin-bottom:3px">${esc(prov.nombre)}</div>${prov.contacto?`<div style="font-size:12px;color:#9CA3AF">${esc(prov.contacto)}</div>`:""}</div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-            <span style="font-size:12px;color:#9CA3AF">${(prov.productos||[]).length} productos</span>
-            ${urg>0?`<span style="background:#FEE2E2;color:#991B1B;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700">⚠ ${urg} urgente${urg>1?"s":""}</span>`:""}
-          </div>
-        </div>
-        ${(prov.productos||[]).length>0?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-          ${ss>0?`<span style="background:#FEE2E2;color:#991B1B;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600">● ${ss} sin stock</span>`:""}
-          ${cr>0?`<span style="background:#FFEDD5;color:#9A3412;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600">● ${cr} crítico</span>`:""}
-          ${bj>0?`<span style="background:#FEF9C3;color:#854D0E;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600">● ${bj} bajo</span>`:""}
-        </div>`:""}
+    return `<div class="sb-prov-item ${currentProvId===prov.id?"sb-prov-active":""}" onclick="goProvDetail('${prov.id}')" style="border-left:3px solid ${color}">
+      <div class="sb-prov-name">${esc(prov.nombre)}</div>
+      <div class="sb-prov-meta">
+        <span>${(prov.productos||[]).length} prod.</span>
+        ${urg>0?`<span class="sb-urg-badge">⚠ ${urg}</span>`:""}
       </div>
     </div>`;
-  }).join("");
+  }).join(""));
 }
 
 function resetProvForm() {
@@ -794,33 +855,26 @@ function renderDetail() {
 
   const el = document.getElementById("pd-list");
   if (!items.length) {
-    el.innerHTML=`<div class="empty"><div class="empty-ico">📦</div><div class="empty-t">${(prov.productos||[]).length===0?"Sin productos — agregá desde la base de datos":"Sin resultados"}</div></div>`;
+    el.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:50px 20px;color:#9CA3AF"><div style="font-size:36px;margin-bottom:10px">📦</div><div style="font-size:15px;font-weight:600;color:#6B7280">${(prov.productos||[]).length===0?"Sin productos — agregá desde la base de datos":"Sin resultados"}</div></td></tr>`;
     return;
   }
   el.innerHTML = items.map(pp=>{
     const p=DB.productos.find(x=>x.id===pp.productoId);
     if(!p) return "";
     const rub=getRubro(p.rubroId), min=getMin(p,pp), urg=getUrg(pp.stock,min), m=urg?URG[urg]:null;
-    const minLabel = pp.minimoManual>0?`mín: ${pp.minimoManual} ✏️`:p.minimoManual>0?`mín: ${p.minimoManual} (prod.)`:rub?`mín: ${min} (${rub.nombre})`:`mín: ${min}`;
-    return `<div class="stk-card" style="border-left:4px solid ${m?m.dot:"#E5E7EB"}">
-      <div class="stk-inner">
-        <div class="stk-top">
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.nombre)}</div>
-            <div style="font-size:11px;color:#9CA3AF;margin-top:2px">${esc(rub?.nombre||"Sin rubro")} · ${minLabel}</div>
-          </div>
-          <div class="stk-actions">
-            ${badge(urg)}
-            <button class="act-btn" style="background:#EEF2FF" onclick="openStkEdit('${pp.productoId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-            <button class="act-btn" style="background:#FEE2E2" onclick="delProdFromProv('${pp.productoId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 00-1 1v.5m9-1.5a1 1 0 011 1V7m-9 0V6a2 2 0 012-2h4a2 2 0 012 2v1"/></svg></button>
-          </div>
-        </div>
-        <div class="stk-inputs">
-          <div class="stk-f"><div class="stk-lbl" style="color:#9CA3AF">Stock actual</div><input type="number" class="stk-inp" style="border:1.5px solid #E5E7EB;background:#FAFAFA;color:#111827" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)"></div>
-          <div class="stk-f"><div class="stk-lbl" style="color:#6366F1">A pedir</div><input type="number" class="stk-inp" style="border:2px solid #6366F1;background:#EEF2FF;color:#4F46E5" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)"></div>
-        </div>
-      </div>
-    </div>`;
+    const minSrc = pp.minimoManual>0?"✏️":p.minimoManual>0?"prod.":rub?rub.nombre.slice(0,12):"def.";
+    return `<tr class="prod-row" style="border-left:3px solid ${m?m.dot:"#E5E7EB"}">
+      <td class="td-name" title="${esc(p.nombre)}">${esc(p.nombre)}</td>
+      <td class="td-rub">${esc(rub?.nombre||"—")}</td>
+      <td class="td-num"><input type="number" class="tbl-inp stk-inp-tbl" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)"></td>
+      <td class="td-num" style="color:#6B7280;font-size:12px">${min} <span style="color:#9CA3AF;font-size:10px">(${minSrc})</span></td>
+      <td class="td-urg">${badge(urg)}</td>
+      <td class="td-num"><input type="number" class="tbl-inp apedir-inp-tbl" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)"></td>
+      <td class="td-act">
+        <button class="tbl-btn tbl-btn-e" onclick="openStkEdit('${pp.productoId}')" title="Editar mínimo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="tbl-btn tbl-btn-d" onclick="delProdFromProv('${pp.productoId}')" title="Quitar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      </td>
+    </tr>`;
   }).join("");
 }
 
@@ -1233,6 +1287,87 @@ function showConfirm(title, msg, fn) {
 // ══ INIT ══════════════════════════════════════════════════════════════════════
 showLoading();
 // Firebase listener already set up above — renderCurrentView() called when data arrives
+
+
+// ── Helpers desktop ─────────────────────────────────────────────────────────
+function setSortPD(key) {
+  const sel = document.getElementById("pd-sort");
+  if (sel) { sel.value = key; renderDetail(); }
+}
+
+function goTab(tab) {
+  currentTab = tab;
+  // Deactivate all pages
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".sb-nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("page-"+tab).classList.add("active");
+  const navBtn = document.getElementById("nav-"+tab);
+  if (navBtn) navBtn.classList.add("active");
+  // Update breadcrumb
+  const titles = {productos:"Base de Productos", rubros:"Rubros y Mínimos"};
+  document.getElementById("topbar-breadcrumb").textContent = titles[tab]||"";
+  if (tab==="productos") { renderDB(); }
+  if (tab==="rubros")    { renderRubros(); }
+}
+
+function goProvDetail(provId) {
+  currentProvId = provId; window._urgFilter = "";
+  // Deactivate nav buttons, activate no nav
+  document.querySelectorAll(".sb-nav-btn").forEach(b=>b.classList.remove("active"));
+  // Show detail page
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById("page-prov-detail").classList.add("active");
+  const prov = DB.proveedores.find(p=>p.id===provId);
+  const idx  = DB.proveedores.indexOf(prov);
+  const color = PCOLORS[idx%PCOLORS.length];
+  document.getElementById("pd-title").textContent    = prov?.nombre||"";
+  document.getElementById("pd-contact").textContent  = prov?.contacto||"";
+  document.getElementById("pd-hdr-icon").style.background = color+"22";
+  document.getElementById("pd-hdr-icon").querySelector("svg").style.stroke = color;
+  document.getElementById("topbar-breadcrumb").textContent = "Proveedores › " + (prov?.nombre||"");
+  document.getElementById("pd-search").value = "";
+  document.getElementById("pd-sort").value   = "urgencia";
+  renderDetail();
+  renderProvList(); // refresh sidebar active state
+}
+
+function goProvList() {
+  currentProvId = null;
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById("page-welcome").classList.add("active");
+  document.getElementById("topbar-breadcrumb").textContent = "";
+  renderProvList();
+}
+
+// Patch renderDetail chips for desktop (pill buttons)
+const _origRenderDetail = renderDetail;
+function renderDetail() {
+  _origRenderDetail();
+  // Fix chip row to use desktop pill style
+  const prov = DB.proveedores.find(p=>p.id===currentProvId);
+  if (!prov) return;
+  const urgCnt={};
+  (prov.productos||[]).forEach(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); const u=getUrg(pp.stock,getMin(p,pp)); if(u) urgCnt[u]=(urgCnt[u]||0)+1; });
+  document.getElementById("pd-chips").innerHTML = Object.entries(urgCnt).map(([u,c])=>{
+    const m=URG[u], sel=(window._urgFilter||""===u);
+    return `<button class="stat-chip" onclick="toggleUrgF('${u}')"
+      style="background:${(window._urgFilter||"")==u?m.dot:m.bg};color:${(window._urgFilter||"")==u?"#fff":m.text}">
+      <span style="width:7px;height:7px;border-radius:50%;background:${m.dot};display:inline-block"></span>
+      ${u} <strong>${c}</strong></button>`;
+  }).join("");
+}
+
+// Sync indicator
+firebase.database().ref('.info/connected').on('value', snap => {
+  const conn = snap.val();
+  const dot  = document.getElementById('sync-dot');
+  const lbl  = document.getElementById('sync-lbl');
+  if (dot) { dot.className = 'sync-dot' + (conn?'':' off'); }
+  if (lbl) { lbl.textContent = conn?'Conectado':'Sin conexión'; }
+});
+
+// Init
+showLoading();
 </script>
 </body>
 </html>
