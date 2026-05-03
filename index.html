@@ -852,7 +852,14 @@ function renderCurrentView() {
   if (document.getElementById("page-prov-detail")?.classList.contains("active")) renderDetail();
   else if (document.getElementById("page-productos")?.classList.contains("active")) renderDB();
   else if (document.getElementById("page-rubros")?.classList.contains("active")) renderRubros();
-  else renderProvList();
+  else {
+    renderProvList();
+    // Mobile: also refresh the card list if visible
+    if (isMobile && isMobile()) {
+      const mobileProv = document.getElementById("mobile-prov-list-wrap");
+      if (mobileProv && mobileProv.style.display !== "none") renderMobileProvList();
+    }
+  }
 }
 
 function showToast(msg) {
@@ -919,20 +926,7 @@ function goTab(tab) {
   if (tab==="rubros") renderRubros();
 }
 
-function goProvDetail(provId) {
-  currentProvId = provId; window._urgFilter = "";
-  const prov = DB.proveedores.find(p=>p.id===provId);
-  const idx  = DB.proveedores.indexOf(prov);
-  const color = PCOLORS[idx%PCOLORS.length];
-  // pd-hdr not used in desktop — color set via pd-hdr-icon
-  // document.getElementById("pd-hdr").style.background = `linear-gradient(135deg,${color},${color}bb)`;
-  document.getElementById("pd-title").textContent = prov.nombre;
-  document.getElementById("pd-search").value = "";
-  document.getElementById("pd-sort").value = "urgencia";
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.getElementById("page-prov-detail").classList.add("active");
-  renderDetail();
-}
+// goProvDetail defined below with mobile support
 
 function goProvList() {
   currentProvId = null;
@@ -1242,7 +1236,8 @@ function updateApedir(prodId, val) {
   pp.apedir = val===""?0:Math.round(Math.max(0,Number(val)));
   save();
   const total = (prov.productos||[]).reduce((acc,x)=>acc+(Number(x.apedir)||0),0);
-  document.getElementById("pd-total").textContent = Math.round(total)+" unid.";
+  const ptEl = document.getElementById("pd-total"); if(ptEl) ptEl.textContent = Math.round(total)+" unid.";
+  if (isMobile && isMobile()) updateMobileTotalBar();
 }
 
 function delProdFromProv(prodId) {
@@ -1645,23 +1640,27 @@ function goTab(tab) {
 
 function goProvDetail(provId) {
   currentProvId = provId; window._urgFilter = "";
-  // Deactivate nav buttons, activate no nav
   document.querySelectorAll(".sb-nav-btn").forEach(b=>b.classList.remove("active"));
-  // Show detail page
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("page-prov-detail").classList.add("active");
   const prov = DB.proveedores.find(p=>p.id===provId);
   const idx  = DB.proveedores.indexOf(prov);
   const color = PCOLORS[idx%PCOLORS.length];
-  document.getElementById("pd-title").textContent    = prov?.nombre||"";
-  document.getElementById("pd-contact").textContent  = prov?.contacto||"";
-  document.getElementById("pd-hdr-icon").style.background = color+"22";
-  document.getElementById("pd-hdr-icon").querySelector("svg").style.stroke = color;
-  document.getElementById("topbar-breadcrumb").textContent = "Proveedores › " + (prov?.nombre||"");
-  document.getElementById("pd-search").value = "";
-  document.getElementById("pd-sort").value   = "urgencia";
+  if (document.getElementById("pd-title")) document.getElementById("pd-title").textContent = prov?.nombre||"";
+  if (document.getElementById("pd-contact")) document.getElementById("pd-contact").textContent = prov?.contacto||"";
+  const icon = document.getElementById("pd-hdr-icon");
+  if (icon) { icon.style.background=color+"22"; const svg=icon.querySelector("svg"); if(svg) svg.style.stroke=color; }
+  const bc = document.getElementById("topbar-breadcrumb");
+  if (bc) bc.textContent = "Proveedores › " + (prov?.nombre||"");
+  const ps = document.getElementById("pd-search"); if(ps) ps.value="";
+  const pso= document.getElementById("pd-sort");   if(pso) pso.value="urgencia";
   renderDetail();
-  renderProvList(); // refresh sidebar active state
+  renderProvList();
+  // Mobile: show action bar
+  if (isMobile && isMobile()) {
+    document.querySelectorAll(".mobile-nav-btn").forEach(b=>b.classList.remove("active"));
+    ensureMobileActionBar();
+  }
 }
 
 function goProvList() {
@@ -1736,29 +1735,9 @@ function renderMobileProvList() {
   }).join("");
 }
 
-// Patch renderCurrentView to handle mobile
-const _origRCView = renderCurrentView;
-function renderCurrentView() {
-  _origRCView();
-  if (isMobile()) {
-    // Also update mobile prov list if it's visible
-    const mobileProv = document.getElementById("mobile-prov-list-wrap");
-    if (mobileProv && mobileProv.style.display !== "none") renderMobileProvList();
-    renderProvList(); // keep sidebar-style active state in case needed
-  }
-}
+// renderCurrentView mobile logic merged below
 
-// On mobile: override goProvDetail to show back button
-const _origGoProvDetail = goProvDetail;
-function goProvDetail(provId) {
-  _origGoProvDetail(provId);
-  if (isMobile()) {
-    // Update mobile nav to show we're in a prov
-    document.querySelectorAll(".mobile-nav-btn").forEach(b=>b.classList.remove("active"));
-    // Add mobile action bar if not exists
-    ensureMobileActionBar();
-  }
-}
+// Mobile goProvDetail is handled by patching the function body below
 
 function ensureMobileActionBar() {
   let bar = document.getElementById("mobile-action-bar");
@@ -1794,12 +1773,7 @@ function mobileGoBack() {
   mobileGoTab("proveedores");
 }
 
-// Patch updateApedir/updateStock to also update mobile total bar
-const _origUpdateApedir = updateApedir;
-function updateApedir(prodId, val) {
-  _origUpdateApedir(prodId, val);
-  if (isMobile()) updateMobileTotalBar();
-}
+// updateApedir mobile patch merged into renderDetail
 
 // On load, apply mobile layout if needed
 window.addEventListener("resize", () => {
