@@ -258,8 +258,27 @@ td{padding:10px 16px;vertical-align:middle}
   .main{grid-column:1;overflow:hidden}
   .page{padding-bottom:62px}
 
-  /* Page header mobile */
-  .page-hdr{padding:12px 14px;flex-wrap:wrap;gap:8px}
+  /* Page header mobile — colapsable */
+  .page-hdr{
+    padding:10px 14px;flex-wrap:wrap;gap:6px;
+    transition:all .25s ease;position:sticky;top:0;z-index:40;
+  }
+  .page-hdr.hdr-collapsed{
+    padding:6px 14px;
+    flex-direction:row;flex-wrap:nowrap;align-items:center;
+  }
+  .page-hdr.hdr-collapsed .page-hdr-icon{width:28px;height:28px;flex-shrink:0}
+  .page-hdr.hdr-collapsed .page-hdr-title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .page-hdr.hdr-collapsed .page-hdr-sub{display:none}
+  .page-hdr.hdr-collapsed .page-hdr-actions{display:none}
+  /* Stats row colapsable */
+  .stats-row.stats-collapsed{padding:6px 12px}
+  .toolbar.toolbar-collapsed{padding:6px 12px}
+  /* Botones de acción mobile compactos en header colapsado */
+  .mobile-hdr-actions{
+    display:none;margin-left:auto;flex-shrink:0;gap:6px;align-items:center;
+  }
+  .page-hdr.hdr-collapsed .mobile-hdr-actions{display:flex}
   .page-hdr-title{font-size:15px}
   .page-hdr-actions{gap:6px;width:100%}
   .page-hdr-actions .btn{padding:7px 12px;font-size:12px;flex:1}
@@ -273,37 +292,60 @@ td{padding:10px 16px;vertical-align:middle}
   .stats-row{padding:8px 14px;overflow-x:auto;flex-wrap:nowrap}
   .stat-chip{flex-shrink:0;font-size:11px;padding:5px 12px}
 
-  /* Table → cards en mobile */
-  .tbl-wrap{padding:10px 14px 0;overflow-y:auto;padding-bottom:0}
-  table,thead,tbody,tr{display:block;width:100%}
+  /* Table → cards compactas en mobile */
+  .tbl-wrap{padding:8px 12px;overflow-y:auto}
+  table,thead,tbody{display:block;width:100%}
   thead{display:none}
-  .prod-row{
+  tr.prod-row{
+    display:grid;
+    grid-template-columns:1fr auto;
+    grid-template-rows:auto auto auto;
     background:var(--surface);border-radius:14px;margin-bottom:8px;
-    border-left:4px solid var(--border);padding:0;
+    border-left:4px solid var(--border);
     box-shadow:0 1px 4px rgba(28,46,62,.07);
-    border-bottom:none!important;
+    border-bottom:none!important;overflow:hidden;
   }
-  .prod-row:hover{background:var(--surface)}
-  td{display:flex;align-items:center;padding:0}
-  .td-name{
+  tr.prod-row:hover{background:var(--surface)}
+  /* Nombre — ocupa columna 1, fila 1 */
+  td.td-name{
+    grid-column:1;grid-row:1;
     font-size:13px;font-weight:800;color:var(--text);
-    padding:12px 14px 4px;max-width:none;white-space:normal;
-    display:block;width:100%;
+    padding:11px 12px 2px;max-width:none;white-space:normal;
+    display:block;
   }
-  .td-rub{
-    font-size:11px;color:var(--text-m);
-    padding:0 14px 8px;display:block;width:100%;
+  /* Rubro — columna 1, fila 2 */
+  td.td-rub{
+    grid-column:1;grid-row:2;
+    font-size:11px;color:var(--text-m);font-weight:600;
+    padding:0 12px 8px;display:block;
   }
-  .td-urg{padding:0 14px 8px;display:block;width:auto}
-  .td-num{
-    display:flex;align-items:center;gap:6px;
-    padding:6px 14px;width:50%;font-size:12px;
+  /* Urgencia — columna 2, fila 1-2, alineada arriba derecha */
+  td.td-urg{
+    grid-column:2;grid-row:1/3;
+    padding:10px 12px 0 0;display:flex;align-items:flex-start;justify-content:flex-end;
   }
-  .td-act{
-    padding:8px 14px 10px;display:flex;gap:6px;justify-content:flex-end;width:100%;
+  /* Inputs stock/a pedir — columna 1-2, fila 3 */
+  td.td-num{
+    grid-column:1/3;grid-row:3;
+    display:flex;gap:0;padding:0;border-top:1px solid var(--border-l);
+    align-items:stretch;
   }
-  .tbl-inp{width:80px;font-size:14px;padding:7px 8px}
-  .apedir-inp-tbl{width:80px}
+  /* Acciones — escondidas en mobile, se edita inline */
+  td.td-act{display:none}
+  /* Campos de stock/a pedir como bloques en la fila inferior */
+  td.td-num .stock-field, td.td-num .apedir-field{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    padding:8px 10px;
+  }
+  td.td-num .stock-field{border-right:1px solid var(--border-l)}
+  td.td-num .field-lbl{
+    font-size:9px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.5px;margin-bottom:5px;
+  }
+  td.td-num .stock-field .field-lbl{color:var(--text-s)}
+  td.td-num .apedir-field .field-lbl{color:var(--sidebar)}
+  .tbl-inp{width:100%;font-size:16px;font-weight:800;padding:6px 8px;border-radius:10px;text-align:center}
+  .apedir-inp-tbl{width:100%;font-size:16px;font-weight:800}
 
   /* Bottom action bar mobile */
   .action-bar-mobile{
@@ -331,6 +373,9 @@ td{padding:10px 16px;vertical-align:middle}
 
   /* Ocultar elementos desktop */
   .desktop-only{display:none!important}
+  .desktop-min{display:none!important}
+  /* Mostrar urg badge dentro de td-name en mobile vía grid */
+  td.td-urg{display:flex!important;grid-column:2;grid-row:1/3;padding:10px 12px 0 0;align-items:flex-start;justify-content:flex-end}
 }
 
 /* Nav inferior solo visible en mobile */
@@ -1175,10 +1220,18 @@ function renderDetail() {
     return `<tr class="prod-row" style="border-left:3px solid ${m?m.dot:"#E5E7EB"}">
       <td class="td-name" title="${esc(p.nombre)}">${esc(p.nombre)}</td>
       <td class="td-rub">${esc(rub?.nombre||"—")}</td>
-      <td class="td-num"><input type="number" class="tbl-inp stk-inp-tbl" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)"></td>
-      <td class="td-num" style="color:#6B7280;font-size:12px">${min} <span style="color:#9CA3AF;font-size:10px">(${minSrc})</span></td>
+      <td class="td-num" colspan="2">
+        <div class="stock-field">
+          <div class="field-lbl">Stock actual</div>
+          <input type="number" class="tbl-inp stk-inp-tbl" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)">
+        </div>
+        <div class="apedir-field">
+          <div class="field-lbl">A pedir</div>
+          <input type="number" class="tbl-inp apedir-inp-tbl" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)">
+        </div>
+      </td>
       <td class="td-urg">${badge(urg)}</td>
-      <td class="td-num"><input type="number" class="tbl-inp apedir-inp-tbl" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)"></td>
+      <td class="td-num desktop-min" style="color:var(--text-m);font-size:12px">${min} <span style="color:var(--text-s);font-size:10px">(${minSrc})</span></td>
       <td class="td-act">
         <button class="tbl-btn tbl-btn-e" onclick="openStkEdit('${pp.productoId}')" title="Editar mínimo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button class="tbl-btn tbl-btn-d" onclick="delProdFromProv('${pp.productoId}')" title="Quitar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
@@ -1656,10 +1709,11 @@ function goProvDetail(provId) {
   const pso= document.getElementById("pd-sort");   if(pso) pso.value="urgencia";
   renderDetail();
   renderProvList();
-  // Mobile: show action bar
+  // Mobile: show action bar + scroll collapse
   if (isMobile && isMobile()) {
     document.querySelectorAll(".mobile-nav-btn").forEach(b=>b.classList.remove("active"));
     ensureMobileActionBar();
+    setTimeout(initScrollCollapse, 50);
   }
 }
 
@@ -1738,6 +1792,23 @@ function renderMobileProvList() {
 // renderCurrentView mobile logic merged below
 
 // Mobile goProvDetail is handled by patching the function body below
+
+// ── Collapsible header on mobile scroll ──────────────────────────────────────
+function initScrollCollapse() {
+  if (!isMobile()) return;
+  const tblWrap = document.querySelector('#page-prov-detail .tbl-wrap');
+  const pageHdr = document.querySelector('#page-prov-detail .page-hdr');
+  const statsRow = document.querySelector('#page-prov-detail .stats-row');
+  const toolbar  = document.querySelector('#page-prov-detail .toolbar');
+  if (!tblWrap || !pageHdr) return;
+
+  tblWrap.addEventListener('scroll', () => {
+    const scrolled = tblWrap.scrollTop > 40;
+    pageHdr.classList.toggle('hdr-collapsed', scrolled);
+    if (statsRow)  statsRow.classList.toggle('stats-collapsed', scrolled);
+    if (toolbar)   toolbar.classList.toggle('toolbar-collapsed', scrolled);
+  }, {passive:true});
+}
 
 function ensureMobileActionBar() {
   let bar = document.getElementById("mobile-action-bar");
