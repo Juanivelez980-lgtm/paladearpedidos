@@ -51,7 +51,8 @@ body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--
 button,input,select,textarea{font-family:'Nunito',system-ui,sans-serif}
 
 /* ═══════════════════ DESKTOP ══════════════════════════════════════════════ */
-.layout{display:grid;grid-template-columns:265px 1fr;grid-template-rows:54px 1fr;height:100dvh}
+.layout{display:grid;grid-template-columns:265px 1fr;grid-template-rows:54px 1fr;height:100dvh;transition:grid-template-columns .25s ease}
+.layout.sidebar-collapsed{grid-template-columns:52px 1fr}
 
 /* Topbar */
 .topbar{grid-column:1/-1;background:var(--sidebar);display:flex;align-items:center;padding:0 20px;gap:16px;z-index:50;box-shadow:0 2px 8px rgba(30,46,62,.3)}
@@ -62,9 +63,24 @@ button,input,select,textarea{font-family:'Nunito',system-ui,sans-serif}
 .topbar-sync{display:flex;align-items:center;gap:7px;font-size:12px;color:rgba(255,255,255,.6);font-weight:700}
 
 /* Sidebar */
-.sidebar{background:var(--sidebar-d);overflow-y:auto;display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.15)}
+.sidebar{background:var(--sidebar-d);overflow-y:auto;display:flex;flex-direction:column;border-right:1px solid rgba(0,0,0,.15);transition:all .25s ease;overflow-x:hidden}
 .sidebar::-webkit-scrollbar{width:4px}
 .sidebar::-webkit-scrollbar-thumb{background:var(--sidebar-l);border-radius:2px}
+/* Collapsed sidebar */
+.layout.sidebar-collapsed .sidebar{overflow:hidden}
+.layout.sidebar-collapsed .sb-section-title,
+.layout.sidebar-collapsed .sb-prov-name,
+.layout.sidebar-collapsed .sb-prov-meta,
+.layout.sidebar-collapsed .sb-add-btn span,
+.layout.sidebar-collapsed .sb-nav-btn span,
+.layout.sidebar-collapsed .sb-section{display:none}
+.layout.sidebar-collapsed .sb-prov-item{padding:8px 6px;border-radius:0;border-left:3px solid transparent;display:flex;justify-content:center}
+.layout.sidebar-collapsed .sb-prov-active{background:rgba(255,255,255,.18)!important}
+.layout.sidebar-collapsed .sb-divider{margin:4px 6px}
+.layout.sidebar-collapsed .sb-nav-btn{padding:10px;justify-content:center;border-radius:0}
+/* Toggle button */
+.sb-toggle{position:absolute;top:50%;transform:translateY(-50%);right:-12px;width:24px;height:24px;background:var(--sidebar-d);border:2px solid rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;transition:transform .25s}
+.layout.sidebar-collapsed .sb-toggle{transform:translateY(-50%) rotate(180deg)}
 .sb-section{padding:16px 12px 8px}
 .sb-section-title{font-size:10px;font-weight:800;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:1.2px;padding:0 8px;margin-bottom:8px}
 .sb-nav-btn{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:none;background:none;color:rgba(255,255,255,.6);font-size:13px;font-weight:700;cursor:pointer;width:100%;text-align:left;transition:all .15s}
@@ -478,7 +494,10 @@ td{padding:9px 12px;vertical-align:middle}
 </header>
 
 <!-- ══ SIDEBAR ════════════════════════════════════════════════════════════════ -->
-<aside class="sidebar">
+<aside class="sidebar" style="position:relative">
+  <button class="sb-toggle" onclick="toggleSidebar()" title="Colapsar panel">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+  </button>
 
   <!-- Proveedores -->
   <div class="sb-section">
@@ -1019,7 +1038,14 @@ function goProvList() {
   currentProvId = null;
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   const pageP=document.getElementById("page-proveedores"); if(pageP) pageP.classList.add("active"); else document.getElementById("page-welcome")?.classList.add("active");
+  const bc = document.getElementById("topbar-breadcrumb");
+  if (bc) bc.textContent = "";
+  document.querySelector('.layout')?.classList.remove('sidebar-collapsed');
   renderProvList();
+}
+
+function toggleSidebar() {
+  document.querySelector('.layout')?.classList.toggle('sidebar-collapsed');
 }
 
 const openModal  = (id, setup) => { if(setup) setup(); document.getElementById(id).classList.add("open"); };
@@ -1263,7 +1289,7 @@ function renderDetail() {
       <td class="td-name" title="${esc(p.nombre)}">${esc(p.nombre)}<div class="td-rub-inline">${esc(rub?.nombre||"—")}</div></td>
       <td class="td-rub">${esc(rub?.nombre||"—")}</td>
       <td class="td-stock"><input type="number" class="tbl-inp stk-inp-tbl" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)" title="Stock actual"></td>
-      <td class="td-min-val">${min}<span class="min-src">${minSrc}</span></td>
+      <td class="td-min-val">${min}<span class="min-src" title="${minSrc}">${minSrc==="manual"?"✏️":minSrc==="defecto"?"—":minSrc.slice(0,8)}</span></td>
       <td class="td-urg">${badge(urg)}</td>
       <td class="td-apedir"><input type="number" class="tbl-inp apedir-inp-tbl" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)" title="A pedir"></td>
       <td class="td-act">
@@ -1723,6 +1749,7 @@ function goTab(tab) {
   document.getElementById("topbar-breadcrumb").textContent = titles[tab]||"";
   if (tab==="productos") { renderDB(); }
   if (tab==="rubros")    { renderRubros(); }
+  document.querySelector('.layout')?.classList.remove('sidebar-collapsed');
 }
 
 function goProvDetail(provId) {
@@ -1743,6 +1770,10 @@ function goProvDetail(provId) {
   const pso= document.getElementById("pd-sort");   if(pso) pso.value="urgencia";
   renderDetail();
   renderProvList();
+  // Desktop: collapse sidebar for more table space
+  if (!isMobile || !isMobile()) {
+    document.querySelector('.layout')?.classList.add('sidebar-collapsed');
+  }
   // Mobile: show action bar + scroll collapse
   if (isMobile && isMobile()) {
     document.querySelectorAll(".mobile-nav-btn").forEach(b=>b.classList.remove("active"));
