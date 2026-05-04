@@ -298,54 +298,75 @@ td{padding:10px 16px;vertical-align:middle}
   thead{display:none}
   tr.prod-row{
     display:grid;
-    grid-template-columns:1fr auto;
+    grid-template-columns:1fr auto auto;
     grid-template-rows:auto auto auto;
     background:var(--surface);border-radius:14px;margin-bottom:8px;
     border-left:4px solid var(--border);
-    box-shadow:0 1px 4px rgba(28,46,62,.07);
+    box-shadow:0 2px 6px rgba(28,46,62,.09);
     border-bottom:none!important;overflow:hidden;
   }
   tr.prod-row:hover{background:var(--surface)}
-  /* Nombre — ocupa columna 1, fila 1 */
+  /* Nombre — columna 1, fila 1 */
   td.td-name{
     grid-column:1;grid-row:1;
     font-size:13px;font-weight:800;color:var(--text);
-    padding:11px 12px 2px;max-width:none;white-space:normal;
-    display:block;
+    padding:12px 8px 2px 14px;max-width:none;white-space:normal;
+    display:block;line-height:1.3;
   }
   /* Rubro — columna 1, fila 2 */
   td.td-rub{
     grid-column:1;grid-row:2;
     font-size:11px;color:var(--text-m);font-weight:600;
-    padding:0 12px 8px;display:block;
+    padding:0 8px 10px 14px;display:block;
   }
-  /* Urgencia — columna 2, fila 1-2, alineada arriba derecha */
+  /* Urgencia — columna 2, fila 1-2 */
   td.td-urg{
     grid-column:2;grid-row:1/3;
-    padding:10px 12px 0 0;display:flex;align-items:flex-start;justify-content:flex-end;
+    padding:11px 6px 0 0;display:flex;align-items:flex-start;justify-content:flex-end;
   }
-  /* Inputs stock/a pedir — columna 1-2, fila 3 */
+  /* Acciones — columna 3, fila 1-2 */
+  td.td-act{ grid-column:3; grid-row:1/3; }
+  /* Inputs stock/a pedir — columna 1-3, fila 3 */
   td.td-num{
-    grid-column:1/3;grid-row:3;
+    grid-column:1/4;grid-row:3;
     display:flex;gap:0;padding:0;border-top:1px solid var(--border-l);
     align-items:stretch;
   }
-  /* Acciones — escondidas en mobile, se edita inline */
-  td.td-act{display:none}
-  /* Campos de stock/a pedir como bloques en la fila inferior */
-  td.td-num .stock-field, td.td-num .apedir-field{
-    flex:1;display:flex;flex-direction:column;align-items:center;
-    padding:8px 10px;
+  /* Acciones — visible en mobile, compactas en esquina */
+  td.td-act{
+    display:flex!important;
+    grid-column:2;grid-row:1/2;
+    padding:8px 10px 0 0;
+    align-items:flex-start;justify-content:flex-end;
+    gap:5px;
   }
-  td.td-num .stock-field{border-right:1px solid var(--border-l)}
+  td.td-act .tbl-btn{padding:5px 7px;border-radius:10px}
+  /* Campos de stock/a pedir como bloques en la fila inferior */
+  td.td-num .stock-field{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    padding:10px;background:#fff;border-right:1px solid var(--border-l);
+  }
+  td.td-num .apedir-field{
+    flex:1.4;display:flex;flex-direction:column;align-items:center;
+    padding:10px 14px;background:var(--sidebar);border-radius:0 0 10px 0;
+  }
   td.td-num .field-lbl{
-    font-size:9px;font-weight:800;text-transform:uppercase;
-    letter-spacing:.5px;margin-bottom:5px;
+    font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;
   }
   td.td-num .stock-field .field-lbl{color:var(--text-s)}
-  td.td-num .apedir-field .field-lbl{color:var(--sidebar)}
-  .tbl-inp{width:100%;font-size:16px;font-weight:800;padding:6px 8px;border-radius:10px;text-align:center}
-  .apedir-inp-tbl{width:100%;font-size:16px;font-weight:800}
+  td.td-num .apedir-field .field-lbl{color:rgba(255,255,255,.65)}
+  td.td-num .stock-field .tbl-inp{
+    width:100%;font-size:20px;font-weight:800;padding:4px 6px;
+    border-radius:8px;text-align:center;border:1.5px solid var(--border);
+    background:var(--bg);color:var(--text);outline:none;
+  }
+  td.td-num .apedir-field .tbl-inp{
+    width:100%;font-size:24px;font-weight:800;padding:4px 6px;
+    border-radius:8px;text-align:center;
+    border:2px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.15);color:#fff;outline:none;
+  }
+  td.td-num .apedir-field .tbl-inp:focus{border-color:rgba(255,255,255,.65);background:rgba(255,255,255,.22)}
 
   /* Bottom action bar mobile */
   .action-bar-mobile{
@@ -374,8 +395,7 @@ td{padding:10px 16px;vertical-align:middle}
   /* Ocultar elementos desktop */
   .desktop-only{display:none!important}
   .desktop-min{display:none!important}
-  /* Mostrar urg badge dentro de td-name en mobile vía grid */
-  td.td-urg{display:flex!important;grid-column:2;grid-row:1/3;padding:10px 12px 0 0;align-items:flex-start;justify-content:flex-end}
+  /* td.td-urg handled in grid above */
 }
 
 /* Nav inferior solo visible en mobile */
