@@ -126,14 +126,28 @@ thead th:hover{background:var(--sidebar-l)}
 td{padding:10px 16px;vertical-align:middle}
 .td-name{font-weight:700;font-size:13px;color:var(--text);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .td-rub{font-size:12px;color:var(--text-m);font-weight:600;white-space:nowrap}
-.td-num{font-size:13px;color:var(--text);width:130px;font-weight:600}
+.td-rub{font-size:12px;color:var(--text-m);font-weight:600;white-space:nowrap}
+.td-rub-inline{display:none;font-size:11px;color:var(--text-s);font-weight:600;margin-top:2px}
+.td-stock{width:110px;text-align:center}
+.td-min-val{width:90px;font-size:13px;color:var(--text-m);font-weight:700;text-align:center}
+.min-src{display:block;font-size:10px;color:var(--text-s);font-weight:600;margin-top:1px}
 .td-urg{width:115px}
-.td-act{width:90px;text-align:right}
-.tbl-inp{width:90px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-weight:700;text-align:center;outline:none;background:var(--bg);color:var(--text)}
+.td-apedir{width:100px;text-align:center}
+.td-act{width:70px;text-align:right}
+/* Base input */
+.tbl-inp{padding:7px 10px;border:1.5px solid var(--border);border-radius:20px;font-size:14px;font-weight:700;text-align:center;outline:none;background:var(--bg);color:var(--text);width:100%}
 .tbl-inp:focus{border-color:var(--sidebar);background:#fff}
-.apedir-inp-tbl{border-color:#8AAEC8;color:var(--sidebar);background:#E0EEF8}
-.apedir-inp-tbl:focus{border-color:var(--sidebar)}
-.tbl-btn{border:none;border-radius:20px;padding:5px 9px;cursor:pointer;display:inline-flex;align-items:center;transition:all .15s}
+/* Stock input */
+.stk-inp-tbl{width:88px}
+/* A pedir input — destacado */
+.apedir-inp-tbl{
+  width:88px;
+  border-color:var(--sidebar);border-width:2px;
+  color:var(--sidebar);background:#E8F0F8;
+  font-size:16px;font-weight:800;
+}
+.apedir-inp-tbl:focus{border-color:var(--sidebar-d);background:#fff}
+.tbl-btn{border:none;border-radius:20px;padding:5px 8px;cursor:pointer;display:inline-flex;align-items:center;transition:all .15s}
 .tbl-btn:hover{filter:brightness(.88)}
 .tbl-btn-e{background:#C8DCEE;margin-right:4px;color:var(--sidebar-d)}
 .tbl-btn-d{background:#E8BABA;color:#6E1515}
@@ -300,37 +314,51 @@ td{padding:10px 16px;vertical-align:middle}
     display:grid;
     grid-template-columns:1fr auto auto;
     grid-template-rows:auto auto auto;
-    background:var(--surface);border-radius:14px;margin-bottom:8px;
+    background:var(--surface);border-radius:14px;margin-bottom:10px;
     border-left:4px solid var(--border);
-    box-shadow:0 2px 6px rgba(28,46,62,.09);
+    box-shadow:0 2px 8px rgba(28,46,62,.1);
     border-bottom:none!important;overflow:hidden;
   }
   tr.prod-row:hover{background:var(--surface)}
-  /* Nombre — columna 1, fila 1 */
+  /* Nombre con rubro inline — col 1, row 1-2 */
   td.td-name{
-    grid-column:1;grid-row:1;
+    grid-column:1;grid-row:1/3;
     font-size:13px;font-weight:800;color:var(--text);
-    padding:12px 8px 2px 14px;max-width:none;white-space:normal;
-    display:block;line-height:1.3;
+    padding:12px 8px 12px 14px;max-width:none;white-space:normal;
+    display:block;line-height:1.35;
   }
-  /* Rubro — columna 1, fila 2 */
-  td.td-rub{
-    grid-column:1;grid-row:2;
-    font-size:11px;color:var(--text-m);font-weight:600;
-    padding:0 8px 10px 14px;display:block;
-  }
-  /* Urgencia — columna 2, fila 1-2 */
+  .td-rub-inline{display:block!important}
+  td.td-rub{display:none}
+  /* Urgencia — col 2, row 1 */
   td.td-urg{
-    grid-column:2;grid-row:1/3;
+    grid-column:2;grid-row:1;
     padding:11px 6px 0 0;display:flex;align-items:flex-start;justify-content:flex-end;
   }
-  /* Acciones — columna 3, fila 1-2 */
-  td.td-act{ grid-column:3; grid-row:1/3; }
-  /* Inputs stock/a pedir — columna 1-3, fila 3 */
-  td.td-num{
-    grid-column:1/4;grid-row:3;
-    display:flex;gap:0;padding:0;border-top:1px solid var(--border-l);
-    align-items:stretch;
+  /* Acciones — col 3, row 1 */
+  td.td-act{
+    grid-column:3;grid-row:1;
+    padding:8px 10px 0 0;
+    display:flex!important;flex-direction:column;gap:4px;
+    align-items:flex-end;justify-content:flex-start;
+  }
+  td.td-act .tbl-btn{margin-right:0!important;padding:5px 7px;border-radius:10px}
+  /* Mínimo — col 2-3, row 2 (pequeño, discreto) */
+  td.td-min-val{
+    grid-column:2/4;grid-row:2;
+    padding:0 10px 8px 0;text-align:right;
+    font-size:10px;color:var(--text-s);font-weight:700;
+    display:block;
+  }
+  td.td-min-val .min-src{display:inline;font-size:10px}
+  /* Inputs — col 1-3, row 3 */
+  td.td-stock, td.td-apedir{
+    grid-column:1;grid-row:3;
+    display:flex;flex-direction:column;align-items:center;
+    padding:10px;border-top:1px solid var(--border-l);
+  }
+  td.td-apedir{
+    grid-column:2/4;
+    background:var(--sidebar);border-radius:0 0 10px 0;
   }
   /* Acciones — visible en mobile, compactas en esquina */
   td.td-act{
@@ -342,31 +370,22 @@ td{padding:10px 16px;vertical-align:middle}
   }
   td.td-act .tbl-btn{padding:5px 7px;border-radius:10px}
   /* Campos de stock/a pedir como bloques en la fila inferior */
-  td.td-num .stock-field{
-    flex:1;display:flex;flex-direction:column;align-items:center;
-    padding:10px;background:#fff;border-right:1px solid var(--border-l);
+  /* Mobile: label over each input */
+  td.td-stock::before{content:"STOCK";font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--text-s);margin-bottom:5px}
+  td.td-apedir::before{content:"A PEDIR";font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.65);margin-bottom:5px}
+  td.td-stock .tbl-inp{
+    width:100%;font-size:22px;font-weight:800;padding:5px;
+    border-radius:10px;text-align:center;
+    border:1.5px solid var(--border);background:var(--bg);
+    color:var(--text);outline:none;
   }
-  td.td-num .apedir-field{
-    flex:1.4;display:flex;flex-direction:column;align-items:center;
-    padding:10px 14px;background:var(--sidebar);border-radius:0 0 10px 0;
-  }
-  td.td-num .field-lbl{
-    font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;
-  }
-  td.td-num .stock-field .field-lbl{color:var(--text-s)}
-  td.td-num .apedir-field .field-lbl{color:rgba(255,255,255,.65)}
-  td.td-num .stock-field .tbl-inp{
-    width:100%;font-size:20px;font-weight:800;padding:4px 6px;
-    border-radius:8px;text-align:center;border:1.5px solid var(--border);
-    background:var(--bg);color:var(--text);outline:none;
-  }
-  td.td-num .apedir-field .tbl-inp{
-    width:100%;font-size:24px;font-weight:800;padding:4px 6px;
-    border-radius:8px;text-align:center;
-    border:2px solid rgba(255,255,255,.25);
+  td.td-apedir .tbl-inp{
+    width:100%;font-size:26px;font-weight:800;padding:5px;
+    border-radius:10px;text-align:center;
+    border:2px solid rgba(255,255,255,.3);
     background:rgba(255,255,255,.15);color:#fff;outline:none;
   }
-  td.td-num .apedir-field .tbl-inp:focus{border-color:rgba(255,255,255,.65);background:rgba(255,255,255,.22)}
+  td.td-apedir .tbl-inp:focus{border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.22)}
 
   /* Bottom action bar mobile */
   .action-bar-mobile{
@@ -534,13 +553,13 @@ td{padding:10px 16px;vertical-align:middle}
     <div class="tbl-wrap">
       <table>
         <thead><tr>
-          <th onclick="setSortPD('nombre')" style="width:30%">Producto</th>
+          <th onclick="setSortPD('nombre')" style="width:32%">Producto</th>
           <th onclick="setSortPD('rubro')">Rubro</th>
-          <th onclick="setSortPD('stock')">Stock actual</th>
-          <th>Mínimo</th>
-          <th>Urgencia</th>
-          <th onclick="setSortPD('apedir')">A pedir</th>
-          <th></th>
+          <th onclick="setSortPD('stock')" style="width:100px">Stock</th>
+          <th style="width:90px">Mínimo</th>
+          <th style="width:110px">Urgencia</th>
+          <th onclick="setSortPD('apedir')" style="width:100px">A pedir</th>
+          <th style="width:70px"></th>
         </tr></thead>
         <tbody id="pd-list"></tbody>
       </table>
@@ -1237,21 +1256,13 @@ function renderDetail() {
     if(!p) return "";
     const rub=getRubro(p.rubroId), min=getMin(p,pp), urg=getUrg(pp.stock,min), m=urg?URG[urg]:null;
     const minSrc = pp.minimoManual>0?"✏️":p.minimoManual>0?"prod.":rub?rub.nombre.slice(0,12):"def.";
-    return `<tr class="prod-row" style="border-left:3px solid ${m?m.dot:"#E5E7EB"}">
-      <td class="td-name" title="${esc(p.nombre)}">${esc(p.nombre)}</td>
+    return `<tr class="prod-row" style="border-left:4px solid ${m?m.dot:"var(--border)"}">
+      <td class="td-name" title="${esc(p.nombre)}">${esc(p.nombre)}<div class="td-rub-inline">${esc(rub?.nombre||"—")}</div></td>
       <td class="td-rub">${esc(rub?.nombre||"—")}</td>
-      <td class="td-num" colspan="2">
-        <div class="stock-field">
-          <div class="field-lbl">Stock actual</div>
-          <input type="number" class="tbl-inp stk-inp-tbl" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)">
-        </div>
-        <div class="apedir-field">
-          <div class="field-lbl">A pedir</div>
-          <input type="number" class="tbl-inp apedir-inp-tbl" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)">
-        </div>
-      </td>
+      <td class="td-stock"><input type="number" class="tbl-inp stk-inp-tbl" value="${pp.stock}" min="0" step="any" onchange="updateStock('${pp.productoId}',this.value)" title="Stock actual"></td>
+      <td class="td-min-val">${min}<span class="min-src">${minSrc}</span></td>
       <td class="td-urg">${badge(urg)}</td>
-      <td class="td-num desktop-min" style="color:var(--text-m);font-size:12px">${min} <span style="color:var(--text-s);font-size:10px">(${minSrc})</span></td>
+      <td class="td-apedir"><input type="number" class="tbl-inp apedir-inp-tbl" value="${Math.round(pp.apedir||0)}" min="0" onchange="updateApedir('${pp.productoId}',this.value)" title="A pedir"></td>
       <td class="td-act">
         <button class="tbl-btn tbl-btn-e" onclick="openStkEdit('${pp.productoId}')" title="Editar mínimo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button class="tbl-btn tbl-btn-d" onclick="delProdFromProv('${pp.productoId}')" title="Quitar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#991B1B" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
