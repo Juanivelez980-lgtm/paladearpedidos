@@ -1399,7 +1399,7 @@ let waFiltroMin = 1; // cantidad mínima a pedir para incluir
 function buildWaItems(filtroUrg, filtroMin) {
   const prov = DB.proveedores.find(p=>p.id===currentProvId);
   return (prov?.productos||[])
-    .map(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); const min=getMin(p,pp); const qty=Math.round(Number(pp.apedir)||0); const urg=getUrg(pp.stock,min); return {productoId:pp.productoId,nombre:p?.nombre||"?",qty,urg,urgOrder:URG[urg]?.order??99}; })
+    .map(pp=>{ const p=DB.productos.find(x=>x.id===pp.productoId); const min=getMin(p,pp); const qty=Math.round(Number(pp.apedir)||0); const urg=getUrg(pp.stock,min); return {productoId:pp.productoId,nombre:(p?.nombre||"?").toLowerCase(),qty,urg,urgOrder:URG[urg]?.order??99}; })
     .filter(it=>it.qty>=filtroMin && filtroUrg.includes(it.urg))
     .sort((a,b)=>a.urgOrder-b.urgOrder||a.nombre.localeCompare(b.nombre));
 }
@@ -1569,7 +1569,8 @@ function processFile(file) {
     try {
       let rows;
       if(file.name.toLowerCase().endsWith(".csv")){
-        const text=e.target.result,sep=text.includes(";")?";":",";
+        let text; try{text=new TextDecoder("utf-8",{fatal:true}).decode(e.target.result);}catch(e){text=new TextDecoder("windows-1252").decode(e.target.result);}
+        const sep=text.includes(";")?";":",";
         rows=text.trim().split(/\r?\n/).map(l=>l.split(sep).map(c=>c.replace(/^"|"$/g,"").trim()));
       } else {
         const wb=XLSX.read(e.target.result,{type:"binary"});
@@ -1593,7 +1594,7 @@ function processFile(file) {
       renderImportPreview();
     } catch(err){ showImpErr("Error al procesar: "+err.message); }
   };
-  if(file.name.toLowerCase().endsWith(".csv")) reader.readAsText(file,"UTF-8");
+  if(file.name.toLowerCase().endsWith(".csv")) reader.readAsArrayBuffer(file);
   else reader.readAsBinaryString(file);
 }
 
