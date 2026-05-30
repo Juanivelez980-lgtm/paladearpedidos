@@ -756,7 +756,32 @@ function normalizeDB() {
     if (p.minimoManual === undefined) p.minimoManual = 0;
     if (p.lastStock    === undefined) p.lastStock    = 0;
     if (!p.rubroId) p.rubroId = "";
+    if (p.codigo === undefined) p.codigo = "";
   });
+  limpiarProductosRotos(false); // limpieza silenciosa automática
+}
+
+// Detecta y elimina productos con nombres rotos por encoding.
+// Reasigna referencias de proveedores al producto correcto si existe (por código).
+// Con notify=true muestra un toast; con false corre silencioso.
+function limpiarProductosRotos(notify=true) {
+  const esRoto = nombre => /[�¥¤]/.test(nombre);
+  const rotos = DB.productos.filter(p => esRoto(p.nombre));
+  if (!rotos.length) { if(notify) showToast("✅ No hay productos con nombres rotos"); return; }
+  rotos.forEach(roto => {
+    const correcto = roto.codigo ? DB.productos.find(p => p !== roto && p.codigo && p.codigo === roto.codigo && !esRoto(p.nombre)) : null;
+    DB.proveedores.forEach(pv => {
+      const idx = pv.productos.findIndex(x => x.productoId === roto.id);
+      if (idx < 0) return;
+      if (correcto && !pv.productos.find(x => x.productoId === correcto.id)) {
+        pv.productos[idx].productoId = correcto.id; // reasignar al bueno
+      } else {
+        pv.productos.splice(idx, 1); // sin correcto → sacar
+      }
+    });
+    DB.productos = DB.productos.filter(p => p.id !== roto.id);
+  });
+  if (notify) { save(); renderCurrentView(); showToast(`🗑 ${rotos.length} producto${rotos.length>1?"s rotos eliminados":" roto eliminado"}`); }
 }
 
 // Alias para compatibilidad con llamadas existentes
@@ -1579,13 +1604,15 @@ function processFile(file) {
       }
       if(!rows||rows.length<2) return showImpErr("El archivo parece vacío");
       const hdr=rows[0].map(h=>String(h??"").toLowerCase().trim());
-      const ci=findCol(hdr,"producto","nombre","descripcion","articulo","item","art");
+      const ci=findCol(hdr,"producto","nombre","descripcion","item");
       const ri=findCol(hdr,"rubro","categoria","seccion","grupo","tipo","familia");
       const si=findCol(hdr,"stock","cantidad","cant","existencia","saldo","qty","unidades");
+      const codi=findCol(hdr,"articulo","artículo","codigo","código","cod","sku","id");
       if(ci<0) return showImpErr("No encontré columna de Producto/Nombre");
 
       const items=rows.slice(1).filter(r=>r[ci]&&String(r[ci]).trim()).map(r=>({
         nombre:String(r[ci]).trim(),
+        codigo:codi>=0&&r[codi]!=null?String(r[codi]).trim():"",
         rubroNombre:ri>=0&&r[ri]?String(r[ri]).trim():"",
         stock:si>=0&&!isNaN(parseNum(r[si]))?Math.max(0,parseNum(r[si])):0,
       }));
@@ -1629,6 +1656,12 @@ function renderImportPreview() {
   if(radios.length){ radios[0].checked=true; radios[0].closest("label").style.borderColor="#6366F1"; }
 }
 
+// Busca un producto existente por código (clave estable) y, si no hay, por nombre.
+function findProd(it){
+  if(it.codigo){ const byCod=DB.productos.find(p=>p.codigo&&String(p.codigo)===String(it.codigo)); if(byCod) return byCod; }
+  return DB.productos.find(p=>p.nombre.toLowerCase()===it.nombre.toLowerCase());
+}
+
 function confirmImport() {
   const items=importPreview;
   if(!items) return;
@@ -1644,8 +1677,10 @@ function confirmImport() {
     // Agregar/actualizar la base de datos guardando el stock del Excel
     items.forEach(it=>{
       const rub=DB.rubros.find(r=>r.nombre.toLowerCase()===it.rubroNombre.toLowerCase());
-      const existing=DB.productos.find(p=>p.nombre.toLowerCase()===it.nombre.toLowerCase());
+      const existing=findProd(it);
       if(existing){
+        existing.nombre=it.nombre; // actualizar nombre aunque el id se mantenga
+        if(it.codigo) existing.codigo=it.codigo;
         if(rub) existing.rubroId=rub.id;
         existing.lastStock=it.stock;
         // Sincronizar stock en todos los proveedores que tengan este producto
@@ -1654,7 +1689,7 @@ function confirmImport() {
           if(pp){ pp.stock=it.stock; pp.apedir=Math.round(Math.max(0,getMin(existing,pp)-it.stock)); }
         });
       } else {
-        DB.productos.push({id:uid(),nombre:it.nombre,rubroId:rub?.id||"",minimoManual:0,lastStock:it.stock});
+        DB.productos.push({id:uid(),nombre:it.nombre,codigo:it.codigo||"",rubroId:rub?.id||"",minimoManual:0,lastStock:it.stock});
       }
     });
   } else {
@@ -1666,11 +1701,14 @@ function confirmImport() {
 
     items.forEach(it=>{
       // Buscar o crear producto en DB
-      let prod=DB.productos.find(p=>p.nombre.toLowerCase()===it.nombre.toLowerCase());
+      let prod=findProd(it);
       if(!prod){
         const rub=DB.rubros.find(r=>r.nombre.toLowerCase()===it.rubroNombre.toLowerCase());
-        prod={id:uid(),nombre:it.nombre,rubroId:rub?.id||"",minimoManual:0};
+        prod={id:uid(),nombre:it.nombre,codigo:it.codigo||"",rubroId:rub?.id||"",minimoManual:0};
         DB.productos.push(prod);
+      } else {
+        prod.nombre=it.nombre; // actualizar nombre manteniendo el id
+        if(it.codigo) prod.codigo=it.codigo;
       }
       if(!inProv.has(prod.id)){
         const min=getMin(prod,null);
